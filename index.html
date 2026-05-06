@@ -372,14 +372,14 @@
    🔧 CONFIGURACIÓN — rellena con tus datos
    ══════════════════════════════════════════ */
 const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyA04LlPjz6MtLNnn8xUAobAN4cK6TdQSuE",
-  authDomain:        "comunionjuanki.firebaseapp.com",
-  projectId:         "comunionjuanki",
-  storageBucket:     "comunionjuanki.firebasestorage.app",
-  messagingSenderId: "750596212161",
-  appId:             "1:750596212161:web:811e43615123b6340e9b40"
+  apiKey:            "AIzaSyAnocmCTzAGZaB9KOw2LZzOroAM7r8__eY",
+  authDomain:        "comunionjuanki-2ecc3.firebaseapp.com",
+  projectId:         "comunionjuanki-2ecc3",
+  storageBucket:     "comunionjuanki-2ecc3.firebasestorage.app",
+  messagingSenderId: "833958807289",
+  appId:             "1:833958807289:web:f782678cfba696a8c50428"
 };
-const ADMIN_PASS = "juanki2016"; // cambia esta contraseña
+const ADMIN_PASS = "juanki2025"; // cambia esta contraseña
 /* ══════════════════════════════════════════ */
 
 const $ = id => document.getElementById(id);
@@ -406,12 +406,7 @@ async function getDB() {
   _db = getFirestore(await getApp());
   return _db;
 }
-async function getStorage() {
-  if (_storage) return _storage;
-  const { getStorage } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js");
-  _storage = getStorage(await getApp());
-  return _storage;
-}
+/* Storage no necesario — fotos y firmas se guardan como base64 en Firestore */
 
 /* ════════════════════════════════════
    CONTADOR en tiempo real
@@ -485,24 +480,19 @@ async function subirFotos(archivos) {
 }
 
 async function subirUnaFoto(file) {
-  /* placeholder de carga */
   const div = document.createElement("div");
   div.className = "foto-item foto-uploading";
   div.innerHTML = '<div class="spinner"></div>';
   galeria.prepend(div);
 
   try {
-    const { ref, uploadBytes, getDownloadURL } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js");
+    /* comprimir imagen antes de guardar */
+    const base64 = await comprimirImagen(file, 800);
     const { collection, addDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-    const st  = await getStorage();
-    const db  = await getDB();
-    const key = `fotos/${Date.now()}_${file.name}`;
-    const snap = await uploadBytes(ref(st, key), file);
-    const url  = await getDownloadURL(snap.ref);
-    await addDoc(collection(db, "fotos"), { url, timestamp: serverTimestamp() });
+    await addDoc(collection(await getDB(), "fotos"), { base64, timestamp: serverTimestamp() });
 
     const img = document.createElement("img");
-    img.src = url; img.alt = "Foto comunión";
+    img.src = base64; img.alt = "Foto comunión";
     div.className = "foto-item";
     div.innerHTML = "";
     div.appendChild(img);
@@ -510,8 +500,31 @@ async function subirUnaFoto(file) {
   } catch(err) {
     console.error(err);
     div.remove();
-    toast("Error al subir la foto. ¿Configuraste Firebase Storage?", "err");
+    toast("Error al subir la foto.", "err");
   }
+}
+
+/* Redimensiona y comprime a base64 */
+function comprimirImagen(file, maxPx) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const w = Math.round(img.width  * ratio);
+        const h = Math.round(img.height * ratio);
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        res(c.toDataURL("image/jpeg", 0.75));
+      };
+      img.onerror = rej;
+      img.src = ev.target.result;
+    };
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
 }
 
 /* Cargar fotos existentes al arrancar */
@@ -524,7 +537,7 @@ async function cargarFotos() {
       const div = document.createElement("div");
       div.className = "foto-item";
       const img = document.createElement("img");
-      img.src = doc.data().url; img.alt = "Foto comunión";
+      img.src = doc.data().base64; img.alt = "Foto comunión";
       div.appendChild(img);
       galeria.appendChild(div);
     });
@@ -595,29 +608,21 @@ $("btn-guardar-firma").addEventListener("click", async () => {
   btn.disabled = true; btn.textContent = "Guardando…";
 
   try {
-    const dataURL = canvas.toDataURL("image/png");
-    const blob = await (await fetch(dataURL)).blob();
-
-    const { ref, uploadBytes, getDownloadURL } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js");
+    const base64 = canvas.toDataURL("image/png");
+    const now    = new Date();
     const { collection, addDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-    const st   = await getStorage();
-    const db   = await getDB();
-    const key  = `firmas/${Date.now()}_${nombre.replace(/\s+/g,"_")}.png`;
-    const snap = await uploadBytes(ref(st, key), blob);
-    const url  = await getDownloadURL(snap.ref);
-    const now  = new Date();
-    await addDoc(collection(db, "firmas"), {
-      nombre, dedicatoria, url, timestamp: serverTimestamp()
+    await addDoc(collection(await getDB(), "firmas"), {
+      nombre, dedicatoria, base64, timestamp: serverTimestamp()
     });
 
-    agregarFirmaDOM({ nombre, dedicatoria, url, fecha: now.toLocaleDateString("es-ES") });
+    agregarFirmaDOM({ nombre, dedicatoria, url: base64, fecha: now.toLocaleDateString("es-ES") });
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     $("firma-nombre").value = "";
     $("firma-dedicatoria").value = "";
     toast("¡Firma guardada! ✍️", "ok");
   } catch(err) {
     console.error(err);
-    toast("Error al guardar la firma. ¿Configuraste Firebase?", "err");
+    toast("Error al guardar la firma.", "err");
   }
   btn.disabled = false; btn.textContent = "Guardar firma ✓";
 });
@@ -643,7 +648,7 @@ async function cargarFirmas() {
     const snap = await getDocs(query(collection(db, "firmas"), orderBy("timestamp", "desc")));
     snap.forEach(doc => {
       const d = doc.data();
-      agregarFirmaDOM({ nombre: d.nombre, dedicatoria: d.dedicatoria || "", url: d.url, fecha: d.timestamp?.toDate().toLocaleDateString("es-ES") || "" });
+      agregarFirmaDOM({ nombre: d.nombre, dedicatoria: d.dedicatoria || "", url: d.base64 || d.url || "", fecha: d.timestamp?.toDate().toLocaleDateString("es-ES") || "" });
     });
   } catch(e) { /* sin firmas aún */ }
 }
