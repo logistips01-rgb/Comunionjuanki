@@ -358,6 +358,10 @@ body{
     </h1>
     <div class="hero-divider"></div>
     <p class="hero-sub">Un día especial para compartir con las personas que más queremos. Nos alegra tenerte aquí.</p>
+    <div style="margin-top:1.25rem;display:flex;flex-direction:column;gap:.3rem;">
+      <span style="font-size:.75rem;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--accent)">📅 23 de Mayo de 2026</span>
+      <span style="font-size:.8rem;color:var(--muted)">⛪ Iglesia Nuestra Señora de Altabás</span>
+    </div>
     <div class="hero-counter">
       <span class="counter-n" id="cont-num">—</span>
       <span class="counter-label"><strong>confirmados</strong>ya han elegido su plato</span>
@@ -490,15 +494,15 @@ async function getApp(){if(_app)return _app;const{initializeApp}=await import("h
 async function getDB(){if(_db)return _db;const{getFirestore}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");_db=getFirestore(await getApp());return _db;}
 
 /* ── Contador ── */
-(async()=>{
+async function actualizarContador(){
   try{
-    const{collection,onSnapshot}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-    onSnapshot(collection(await getDB(),"respuestas"),snap=>{
-      const el=$("cont-num");el.textContent=snap.size;
-      el.classList.add("bump");setTimeout(()=>el.classList.remove("bump"),350);
-    });
-  }catch{$("cont-num").textContent="?";}
-})();
+    const{collection,getCountFromServer}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const snap=await getCountFromServer(collection(await getDB(),"respuestas"));
+    const el=$("cont-num");el.textContent=snap.data().count;
+    el.classList.add("bump");setTimeout(()=>el.classList.remove("bump"),350);
+  }catch{$("cont-num").textContent="0";}
+}
+actualizarContador();
 
 /* ── Menú ── */
 document.querySelectorAll(".plato").forEach(l=>{
@@ -519,6 +523,7 @@ $("form-menu").addEventListener("submit",async e=>{
     const{collection,addDoc,serverTimestamp}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     await addDoc(collection(await getDB(),"respuestas"),{nombre,segundo:radio.value,timestamp:serverTimestamp()});
     $("form-menu").style.display="none";$("exito").style.display="block";
+    actualizarContador();
   }catch(err){
     console.error(err);toast("Error al guardar","err");
     btn.disabled=false;btn.textContent="Confirmar mi elección";
@@ -662,12 +667,64 @@ $("btn-admin").addEventListener("click",async()=>{
     const{collection,getDocs}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     const snap=await getDocs(collection(await getDB(),"respuestas"));
     if(snap.empty){$("admin-body").innerHTML="<p style='padding:1rem;text-align:center'>Sin respuestas todavía.</p>";return;}
-    const res={};let filas="";
-    snap.forEach(doc=>{const d=doc.data();filas+=`<tr><td>${d.nombre}</td><td>${d.segundo}</td></tr>`;res[d.segundo]=(res[d.segundo]||0)+1;});
+    const res={};let filas="";let datos=[];
+    snap.forEach(doc=>{const d=doc.data();filas+=`<tr><td>${d.nombre}</td><td>${d.segundo}</td></tr>`;res[d.segundo]=(res[d.segundo]||0)+1;datos.push(d);});
     const rr=Object.entries(res).sort((a,b)=>b[1]-a[1]).map(([p,n])=>`<tr><td>${p}</td><td><strong>${n}</strong></td></tr>`).join("");
-    $("admin-body").innerHTML=`<h4 style="margin-bottom:.75rem">Resumen</h4><table><thead><tr><th>Plato</th><th>Votos</th></tr></thead><tbody>${rr}</tbody></table><h4 style="margin:1.5rem 0 .75rem">Todos los invitados</h4><table><thead><tr><th>Invitado</th><th>Segundo</th></tr></thead><tbody>${filas}</tbody></table>`;
+    window._adminDatos=datos;
+    $("admin-body").innerHTML=`
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+        <button onclick="exportarCSV()" style="padding:.5rem 1rem;background:var(--ink);color:#fff;border:none;border-radius:6px;font-size:.8rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ Exportar menú CSV</button>
+        <button onclick="exportarFotos()" style="padding:.5rem 1rem;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:.8rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ Descargar fotos</button>
+        <button onclick="exportarFirmas()" style="padding:.5rem 1rem;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:.8rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ Descargar firmas</button>
+      </div>
+      <h4 style="margin-bottom:.75rem">Resumen</h4><table><thead><tr><th>Plato</th><th>Votos</th></tr></thead><tbody>${rr}</tbody></table>
+      <h4 style="margin:1.5rem 0 .75rem">Todos los invitados</h4><table><thead><tr><th>Invitado</th><th>Segundo</th></tr></thead><tbody>${filas}</tbody></table>`;
   }catch(err){$("admin-body").innerHTML="<p style='padding:1rem;color:red'>Error. Comprueba las reglas de Firestore.</p>";}
 });
+/* ── Exportar CSV menú ── */
+async function exportarCSV(){
+  const datos=window._adminDatos||[];
+  if(!datos.length){toast("Sin datos","err");return;}
+  let csv="Nombre,Segundo plato\n";
+  datos.forEach(d=>csv+=`"${d.nombre}","${d.segundo}"\n`);
+  const a=document.createElement("a");
+  a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);
+  a.download="menu-juanki.csv";a.click();
+}
+
+/* ── Descargar fotos ── */
+async function exportarFotos(){
+  try{
+    const{collection,getDocs,orderBy,query}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const snap=await getDocs(query(collection(await getDB(),"fotos"),orderBy("timestamp","desc")));
+    if(snap.empty){toast("Sin fotos","err");return;}
+    let i=1;
+    snap.forEach(doc=>{
+      const a=document.createElement("a");
+      a.href=doc.data().base64;
+      a.download=`foto-juanki-${i++}.jpg`;
+      a.click();
+    });
+    toast("Descargando fotos… 📸");
+  }catch{toast("Error al descargar fotos","err");}
+}
+
+/* ── Descargar firmas ── */
+async function exportarFirmas(){
+  try{
+    const{collection,getDocs,orderBy,query}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const snap=await getDocs(query(collection(await getDB(),"firmas"),orderBy("timestamp","desc")));
+    if(snap.empty){toast("Sin firmas","err");return;}
+    snap.forEach(doc=>{
+      const d=doc.data();
+      const a=document.createElement("a");
+      a.href=d.base64;
+      a.download=`firma-${d.nombre.replace(/\s+/g,"-")}.png`;
+      a.click();
+    });
+    toast("Descargando firmas… ✍️");
+  }catch{toast("Error al descargar firmas","err");}
+}
 </script>
 </body>
 </html>
