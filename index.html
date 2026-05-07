@@ -296,7 +296,12 @@ body{
 }
 .firma-card img{height:64px;border-radius:5px;border:1px solid rgba(184,149,90,.2);flex-shrink:0;}
 .fc-nombre{font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--ink);}
-.fc-ded{font-size:.85rem;color:var(--muted);font-style:italic;margin-top:.2rem;line-height:1.5;}
+.fc-ded{font-size:.85rem;color:var(--muted);font-style:italic;margin-top:.2rem;line-height:1.6;
+  max-height:4.8em;overflow:hidden;transition:max-height .3s ease;}
+.fc-ded.expandida{max-height:1000px;}
+.fc-ver-mas{font-size:.75rem;color:var(--accent);cursor:pointer;background:none;border:none;
+  padding:0;margin-top:.3rem;font-family:'DM Sans',sans-serif;font-weight:500;letter-spacing:.03em;display:block;}
+.fc-ver-mas:hover{text-decoration:underline;}
 .fc-fecha{font-size:.7rem;color:rgba(138,125,110,.6);margin-top:.3rem;}
 
 /* ─── ADMIN ─── */
@@ -448,7 +453,6 @@ body{
   <p class="sec-desc">Firma con el dedo o el ratón y escribe unas palabras para Juanki.</p>
 
   <div class="campo"><label for="firma-nombre">Tu nombre</label><input type="text" id="firma-nombre" placeholder="Tu nombre" autocomplete="name"/></div>
-  <div class="campo"><label for="firma-ded">Dedicatoria <span style="font-weight:300;text-transform:none;letter-spacing:0">(opcional)</span></label><textarea id="firma-ded" rows="2" placeholder="Escribe algo bonito para Juanki…"></textarea></div>
 
   <canvas id="canvas-firma"></canvas>
   <div class="firma-ctrls">
@@ -462,6 +466,7 @@ body{
       <div class="cdot" data-c="#1a3a7a" style="background:#1a3a7a"></div>
     </div>
   </div>
+  <div class="campo" style="margin-top:1rem"><label for="firma-ded">Dedicatoria <span style="font-weight:300;text-transform:none;letter-spacing:0">(opcional)</span></label><textarea id="firma-ded" rows="3" placeholder="Escribe algo bonito para Juanki…"></textarea></div>
   <div id="firmas-lista"></div>
 </section>
 
@@ -652,8 +657,22 @@ $("btn-firma").addEventListener("click",async()=>{
 
 function addFirmaDOM({nombre,ded,base64,fecha}){
   const d=document.createElement("div");d.className="firma-card";
-  d.innerHTML=`<img src="${base64}" alt="Firma"/><div><div class="fc-nombre">${nombre}</div>${ded?`<div class="fc-ded">"${ded}"</div>`:""}<div class="fc-fecha">${fecha}</div></div>`;
+  let dedHTML="";
+  if(ded){
+    const id="ded-"+Date.now()+Math.random().toString(36).slice(2);
+    dedHTML=`<div class="fc-ded" id="${id}">"${ded}"</div>
+    <button class="fc-ver-mas" onclick="toggleDed(this)" style="display:none">Ver más ▾</button>`;
+  }
+  d.innerHTML=`<img src="${base64}" alt="Firma"/><div style="min-width:0;flex:1"><div class="fc-nombre">${nombre}</div>${dedHTML}<div class="fc-fecha">${fecha}</div></div>`;
   $("firmas-lista").prepend(d);
+  /* mostrar botón solo si el texto se desborda */
+  if(ded){
+    const dedEl=d.querySelector(".fc-ded");
+    const btn=d.querySelector(".fc-ver-mas");
+    requestAnimationFrame(()=>{
+      if(dedEl.scrollHeight>dedEl.clientHeight+4) btn.style.display="block";
+    });
+  }
 }
 
 (async()=>{
@@ -691,7 +710,13 @@ $("btn-admin").addEventListener("click",async()=>{
       <h4 style="margin:1.5rem 0 .75rem">Todos los invitados</h4><table><thead><tr><th>Invitado</th><th>Segundo</th></tr></thead><tbody>${filas}</tbody></table>`;
   }catch(err){$("admin-body").innerHTML="<p style='padding:1rem;color:red'>Error. Comprueba las reglas de Firestore.</p>";}
 });
-/* ── Exportar XLSX menú ── */
+/* ── Ver más / Ver menos en dedicatorias ── */
+function toggleDed(btn){
+  const ded=btn.previousElementSibling;
+  const expandida=ded.classList.toggle("expandida");
+  btn.textContent=expandida?"Ver menos ▴":"Ver más ▾";
+}
+
 async function exportarXLSX(){
   const datos=window._adminDatos||[];
   if(!datos.length){toast("Sin datos","err");return;}
