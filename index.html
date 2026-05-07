@@ -673,7 +673,7 @@ $("btn-admin").addEventListener("click",async()=>{
     window._adminDatos=datos;
     $("admin-body").innerHTML=`
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.25rem;">
-        <button onclick="exportarCSV()" style="padding:.5rem 1rem;background:var(--ink);color:#fff;border:none;border-radius:6px;font-size:.8rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ Exportar menú CSV</button>
+        <button onclick="exportarXLSX()" style="padding:.5rem 1rem;background:var(--ink);color:#fff;border:none;border-radius:6px;font-size:.8rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ Exportar Excel (.xlsx)</button>
         <button onclick="exportarFotos()" style="padding:.5rem 1rem;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:.8rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ Descargar fotos</button>
         <button onclick="exportarFirmas()" style="padding:.5rem 1rem;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:.8rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ Descargar firmas</button>
       </div>
@@ -681,15 +681,26 @@ $("btn-admin").addEventListener("click",async()=>{
       <h4 style="margin:1.5rem 0 .75rem">Todos los invitados</h4><table><thead><tr><th>Invitado</th><th>Segundo</th></tr></thead><tbody>${filas}</tbody></table>`;
   }catch(err){$("admin-body").innerHTML="<p style='padding:1rem;color:red'>Error. Comprueba las reglas de Firestore.</p>";}
 });
-/* ── Exportar CSV menú ── */
-async function exportarCSV(){
+/* ── Exportar XLSX menú ── */
+async function exportarXLSX(){
   const datos=window._adminDatos||[];
   if(!datos.length){toast("Sin datos","err");return;}
-  let csv="Nombre,Segundo plato\n";
-  datos.forEach(d=>csv+=`"${d.nombre}","${d.segundo}"\n`);
-  const a=document.createElement("a");
-  a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);
-  a.download="menu-juanki.csv";a.click();
+  try{
+    const XLSX=await import("https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs");
+    const resumen={};
+    datos.forEach(d=>{resumen[d.segundo]=(resumen[d.segundo]||0)+1;});
+    const wsInvitados=XLSX.utils.json_to_sheet(datos.map(d=>({"Nombre":d.nombre,"Segundo plato":d.segundo})));
+    wsInvitados["!cols"]=[{wch:28},{wch:55}];
+    const wsResumen=XLSX.utils.json_to_sheet(
+      Object.entries(resumen).sort((a,b)=>b[1]-a[1]).map(([p,n])=>({"Plato":p,"Votos":n}))
+    );
+    wsResumen["!cols"]=[{wch:55},{wch:10}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,wsInvitados,"Invitados");
+    XLSX.utils.book_append_sheet(wb,wsResumen,"Resumen por plato");
+    XLSX.writeFile(wb,"menu-comunion-juanki.xlsx");
+    toast("¡Excel descargado! 📊");
+  }catch(e){console.error(e);toast("Error al exportar Excel","err");}
 }
 
 /* ── Descargar fotos ── */
@@ -709,7 +720,7 @@ async function exportarFotos(){
   }catch{toast("Error al descargar fotos","err");}
 }
 
-/* ── Descargar firmas ── */
+/* ── Descargar firmas con dedicatoria ── */
 async function exportarFirmas(){
   try{
     const{collection,getDocs,orderBy,query}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
@@ -717,13 +728,50 @@ async function exportarFirmas(){
     if(snap.empty){toast("Sin firmas","err");return;}
     snap.forEach(doc=>{
       const d=doc.data();
-      const a=document.createElement("a");
-      a.href=d.base64;
-      a.download=`firma-${d.nombre.replace(/\s+/g,"-")}.png`;
-      a.click();
+      const firmaImg=new Image();
+      firmaImg.onload=()=>{
+        const pad=24;
+        const headerH=d.dedicatoria?110:65;
+        const c=document.createElement("canvas");
+        c.width=Math.max(firmaImg.width+pad*2,500);
+        c.height=firmaImg.height+headerH+pad;
+        const cx=c.getContext("2d");
+        /* fondo */
+        cx.fillStyle="#fffdf7";
+        cx.fillRect(0,0,c.width,c.height);
+        /* nombre */
+        cx.fillStyle="#2b1d0e";
+        cx.font="bold 22px Georgia,serif";
+        cx.fillText(d.nombre,pad,40);
+        /* línea dorada */
+        cx.strokeStyle="#c9a84c";cx.lineWidth=1.5;
+        cx.beginPath();cx.moveTo(pad,52);cx.lineTo(c.width-pad,52);cx.stroke();
+        /* dedicatoria con salto de línea */
+        if(d.dedicatoria){
+          cx.fillStyle="#7a5c38";
+          cx.font="italic 15px Georgia,serif";
+          const maxW=c.width-pad*2;
+          const words=d.dedicatoria.split(" ");
+          let line="";let y=74;
+          words.forEach(w=>{
+            const test=line?line+" "+w:w;
+            if(cx.measureText(test).width>maxW&&line){
+              cx.fillText(`"${line}"`,pad,y);line=w;y+=22;
+            }else line=test;
+          });
+          cx.fillText(`"${line}"`,pad,y);
+        }
+        /* imagen de la firma */
+        cx.drawImage(firmaImg,pad,headerH);
+        const a=document.createElement("a");
+        a.href=c.toDataURL("image/png");
+        a.download=`firma-${d.nombre.replace(/\s+/g,"-")}.png`;
+        a.click();
+      };
+      firmaImg.src=d.base64;
     });
     toast("Descargando firmas… ✍️");
-  }catch{toast("Error al descargar firmas","err");}
+  }catch(e){console.error(e);toast("Error al descargar firmas","err");}
 }
 </script>
 </body>
