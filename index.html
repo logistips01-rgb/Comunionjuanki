@@ -76,9 +76,13 @@ body{
   margin-bottom:1rem;
 }
 .hero-name span{
-  display:block;
+  display:inline;
   font-style:italic;
   color:var(--accent);
+}
+.hero-name .de{
+  color:var(--ink);
+  font-style:normal;
 }
 .hero-divider{
   width:40px;height:1px;
@@ -353,8 +357,7 @@ body{
   <div class="hero-text">
     <p class="hero-eyebrow">Primera Comunión · 2026</p>
     <h1 class="hero-name">
-      Bienvenidos<br>a la <em>Comunión</em><br>de
-      <span>Juanki</span>
+      Bienvenidos<br>a la Comunión<br><span class="de">de </span><span class="nombre">Juanki</span>
     </h1>
     <div class="hero-divider"></div>
     <p class="hero-sub">Un día especial para compartir con las personas que más queremos. Nos alegra tenerte aquí.</p>
