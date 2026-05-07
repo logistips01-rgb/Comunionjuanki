@@ -427,6 +427,21 @@ body{
     <label class="plato"><input type="radio" name="segundo" value="Lubina al horno en salsa vinagreta"><span class="dot">✓</span><span class="pnombre">Lubina al horno en salsa vinagreta</span></label>
     <label class="plato"><input type="radio" name="segundo" value="Merluza a la plancha con mahonesa y pimiento del piquillo (2 rodajas)"><span class="dot">✓</span><span class="pnombre">Merluza a la plancha con mahonesa y pimiento del piquillo <em>(2 rodajas)</em></span></label>
 
+    <!-- Alergias -->
+    <div class="campo" style="margin-top:1.5rem">
+      <label for="alergias">🌿 ¿Tienes alguna alergia o intolerancia? <span style="font-weight:300;text-transform:none;letter-spacing:0">(opcional)</span></label>
+      <input type="text" id="alergias" placeholder="Ej: gluten, lactosa, marisco…"/>
+    </div>
+
+    <!-- Menú infantil -->
+    <label style="display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;border-radius:8px;border:1px solid rgba(184,149,90,.2);background:#fff;cursor:pointer;margin-bottom:.5rem;user-select:none;">
+      <input type="checkbox" id="menu-infantil" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
+      <span>
+        <strong style="font-size:.9rem;color:var(--ink)">🧒 Menú infantil</strong>
+        <span style="display:block;font-size:.78rem;color:var(--muted);margin-top:.1rem">Marca esta opción si es para un niño</span>
+      </span>
+    </label>
+
     <button type="submit" class="btn-main" id="btn-enviar">Confirmar mi elección</button>
   </form>
   <div id="exito">
@@ -560,16 +575,31 @@ document.querySelectorAll(".plato").forEach(l=>{
   });
 });
 
+/* ── Menú infantil oculta selección de platos ── */
+document.getElementById("menu-infantil").addEventListener("change", function(){
+  const platos=document.querySelectorAll(".grupo-titulo,.plato");
+  platos.forEach(p=>p.style.opacity=this.checked?"0.3":"1");
+  if(this.checked) document.querySelectorAll(".plato").forEach(p=>p.classList.remove("sel"));
+});
+
 $("form-menu").addEventListener("submit",async e=>{
   e.preventDefault();
   const nombre=$("nombre").value.trim();
+  const infantil=document.getElementById("menu-infantil").checked;
   const radio=document.querySelector('input[name="segundo"]:checked');
+  const alergias=$("alergias").value.trim();
   if(!nombre){toast("Escribe tu nombre primero","err");return;}
-  if(!radio){toast("Elige un plato","err");return;}
+  if(!infantil&&!radio){toast("Elige un plato","err");return;}
   const btn=$("btn-enviar");btn.disabled=true;btn.textContent="Guardando…";
   try{
     const{collection,addDoc,serverTimestamp}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-    await addDoc(collection(await getDB(),"respuestas"),{nombre,segundo:radio.value,timestamp:serverTimestamp()});
+    await addDoc(collection(await getDB(),"respuestas"),{
+      nombre,
+      segundo: infantil?"🧒 Menú infantil":radio.value,
+      alergias: alergias||"—",
+      infantil,
+      timestamp:serverTimestamp()
+    });
     $("form-menu").style.display="none";$("exito").style.display="block";
     actualizarContador();
   }catch(err){
@@ -730,7 +760,7 @@ $("btn-admin").addEventListener("click",async()=>{
     const snap=await getDocs(collection(await getDB(),"respuestas"));
     if(snap.empty){$("admin-body").innerHTML="<p style='padding:1rem;text-align:center'>Sin respuestas todavía.</p>";return;}
     const res={};let filas="";let datos=[];
-    snap.forEach(doc=>{const d=doc.data();filas+=`<tr><td>${d.nombre}</td><td>${d.segundo}</td></tr>`;res[d.segundo]=(res[d.segundo]||0)+1;datos.push(d);});
+    snap.forEach(doc=>{const d=doc.data();filas+=`<tr><td>${d.nombre}</td><td>${d.segundo}</td><td>${d.alergias||"—"}</td></tr>`;res[d.segundo]=(res[d.segundo]||0)+1;datos.push(d);});
     const rr=Object.entries(res).sort((a,b)=>b[1]-a[1]).map(([p,n])=>`<tr><td>${p}</td><td><strong>${n}</strong></td></tr>`).join("");
     window._adminDatos=datos;
     $("admin-body").innerHTML=`
@@ -740,7 +770,7 @@ $("btn-admin").addEventListener("click",async()=>{
         <button onclick="exportarFirmas()" style="padding:.5rem 1rem;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:.8rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ Descargar firmas</button>
       </div>
       <h4 style="margin-bottom:.75rem">Resumen</h4><table><thead><tr><th>Plato</th><th>Votos</th></tr></thead><tbody>${rr}</tbody></table>
-      <h4 style="margin:1.5rem 0 .75rem">Todos los invitados</h4><table><thead><tr><th>Invitado</th><th>Segundo</th></tr></thead><tbody>${filas}</tbody></table>`;
+      <h4 style="margin:1.5rem 0 .75rem">Todos los invitados</h4><table><thead><tr><th>Invitado</th><th>Segundo</th><th>Alergias</th></tr></thead><tbody>${filas}</tbody></table>`;
   }catch(err){$("admin-body").innerHTML="<p style='padding:1rem;color:red'>Error. Comprueba las reglas de Firestore.</p>";}
 });
 /* ── Ver más / Ver menos en dedicatorias ── */
@@ -757,8 +787,8 @@ async function exportarXLSX(){
     const XLSX=await import("https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs");
     const resumen={};
     datos.forEach(d=>{resumen[d.segundo]=(resumen[d.segundo]||0)+1;});
-    const wsInvitados=XLSX.utils.json_to_sheet(datos.map(d=>({"Nombre":d.nombre,"Segundo plato":d.segundo})));
-    wsInvitados["!cols"]=[{wch:28},{wch:55}];
+    const wsInvitados=XLSX.utils.json_to_sheet(datos.map(d=>({"Nombre":d.nombre,"Segundo plato":d.segundo,"Menú infantil":d.infantil?"Sí":"No","Alergias/Intolerancias":d.alergias||"—"})));
+    wsInvitados["!cols"]=[{wch:28},{wch:45},{wch:14},{wch:30}];
     const wsResumen=XLSX.utils.json_to_sheet(
       Object.entries(resumen).sort((a,b)=>b[1]-a[1]).map(([p,n])=>({"Plato":p,"Votos":n}))
     );
