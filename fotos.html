@@ -127,15 +127,7 @@
     #tv-slides { position: absolute; inset: 0; }
     .tv-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s ease-in-out; }
     .tv-slide.activa { opacity: 1; }
-    .tv-slide img { width: 100%; height: 100%; object-fit: cover; }
-    .tv-slide.activa img { animation: kb0 8s ease-in-out forwards; }
-    @keyframes kb0 { 0% { transform: scale(1); }         100% { transform: scale(1.12) translate(-2%,-1.5%); } }
-    .tv-slide.activa.kb1 img { animation-name: kb1; }
-    @keyframes kb1 { 0% { transform: scale(1.08) translate(2%,1%); } 100% { transform: scale(1); } }
-    .tv-slide.activa.kb2 img { animation-name: kb2; }
-    @keyframes kb2 { 0% { transform: scale(1) translate(2%,-1%); }   100% { transform: scale(1.1) translate(-1%,1%); } }
-    .tv-slide.activa.kb3 img { animation-name: kb3; }
-    @keyframes kb3 { 0% { transform: scale(1.1) translate(-2%,1%); } 100% { transform: scale(1) translate(1%,-1%); } }
+    .tv-slide img { width: 100%; height: 100%; object-fit: contain; background: #000; }
     #tv-banner { position: absolute; top: 0; left: 0; right: 0; z-index: 10; background: var(--accent); color: #fff; text-align: center; padding: 12px; font-family: 'Cormorant Garamond', serif; font-size: clamp(1.3rem,3vw,2.2rem); font-weight: 400; letter-spacing: .12em; font-style: italic; }
     #tv-footer { position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; padding: 24px 28px 20px; display: flex; justify-content: space-between; align-items: flex-end; background: linear-gradient(to top, rgba(0,0,0,.8) 0%, transparent 100%); }
     #tv-footer .tv-tit { font-size: clamp(.9rem,2.5vw,1.4rem); font-weight: 700; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.9); letter-spacing: .05em; }
@@ -416,8 +408,7 @@
     const tvCnt     = document.getElementById('tv-cnt');
     const tvComEl   = document.getElementById('tv-comentarios');
     const audioTV   = document.getElementById('audio-tv');
-    const KB = ['kb0','kb1','kb2','kb3'];
-    let slides = [], kbIdx = 0, tvTimer = null, mutedTV = false, tvComOff = null;
+    let slides = [], tvTimer = null, mutedTV = false, tvComOff = null;
 
     function agregarSlideTV(src) {
       const d = document.createElement('div'); d.className = 'tv-slide';
@@ -429,11 +420,8 @@
     function mostrarSlide(idx) {
       if (!slides.length) return;
       idx = ((idx % slides.length) + slides.length) % slides.length;
-      slides.forEach(s => {
-        s.classList.remove('activa', 'kb0','kb1','kb2','kb3');
-        const im = s.querySelector('img'); im.style.animation = 'none'; im.offsetHeight; im.style.animation = '';
-      });
-      slides[idx].classList.add('activa', KB[kbIdx++ % KB.length]);
+      slides.forEach(s => s.classList.remove('activa'));
+      slides[idx].classList.add('activa');
       clearTimeout(tvTimer); tvTimer = setTimeout(() => mostrarSlide(idx + 1), 6000);
     }
 
