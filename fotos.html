@@ -232,8 +232,7 @@
     <div id="tv-comentarios"></div>
     <button id="btn-salir-tv" onclick="cerrarTV()">✕ Salir</button>
     <button id="btn-mute-tv"  onclick="toggleMute()">🔊</button>
-    <!-- Pon aquí el fichero de música o elimina el audio -->
-    <audio id="audio-tv" src="musica.mp3" loop preload="none"></audio>
+    <audio id="audio-tv" preload="none"></audio>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -408,6 +407,13 @@
     const tvCnt     = document.getElementById('tv-cnt');
     const tvComEl   = document.getElementById('tv-comentarios');
     const audioTV   = document.getElementById('audio-tv');
+    const playlist  = ['musica1.mp3', 'musica2.mp3'];
+    let playIdx = 0;
+    audioTV.addEventListener('ended', () => {
+      playIdx = (playIdx + 1) % playlist.length;
+      audioTV.src = playlist[playIdx];
+      audioTV.play().catch(() => {});
+    });
     let slides = [], tvTimer = null, mutedTV = false, tvComOff = null;
 
     function agregarSlideTV(src) {
@@ -454,7 +460,7 @@
       if (!slides.length) { alert('Aún no hay fotos para el pase.'); return; }
       tvModal.classList.add('open'); document.body.style.overflow = 'hidden';
       mostrarSlide(0);
-      audioTV.currentTime = 0; audioTV.play().catch(() => {});
+      playIdx = 0; audioTV.src = playlist[0]; audioTV.currentTime = 0; audioTV.play().catch(() => {});
       iniciarComTV();
       if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
     }
