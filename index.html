@@ -229,21 +229,14 @@ body{
   border:2px solid transparent;transition:transform .15s;
 }
 .cdot:hover,.cdot.act{transform:scale(1.25);border-color:var(--ink);}
-#firmas-lista{display:flex;flex-direction:column;gap:.75rem;margin-top:1.75rem;}
-.firma-card{
-  display:flex;align-items:flex-start;gap:1rem;
-  padding:.9rem 1rem;border-radius:8px;
-  border:1px solid rgba(184,149,90,.15);background:var(--white);
-}
-.firma-card img{height:64px;border-radius:5px;border:1px solid rgba(184,149,90,.2);flex-shrink:0;}
-.fc-nombre{font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--ink);}
-.fc-ded{font-size:.85rem;color:var(--muted);font-style:italic;margin-top:.2rem;line-height:1.6;
-  max-height:4.8em;overflow:hidden;transition:max-height .3s ease;}
-.fc-ded.expandida{max-height:1000px;}
-.fc-ver-mas{font-size:.75rem;color:var(--accent);cursor:pointer;background:none;border:none;
-  padding:0;margin-top:.3rem;font-family:'DM Sans',sans-serif;font-weight:500;letter-spacing:.03em;display:block;}
-.fc-ver-mas:hover{text-decoration:underline;}
-.fc-fecha{font-size:.7rem;color:rgba(138,125,110,.6);margin-top:.3rem;}
+#firmas-lista{display:flex;flex-direction:column;gap:1.25rem;margin-top:2rem;}
+.firma-card{background:var(--white);border:1px solid rgba(184,149,90,.18);border-radius:12px;padding:1.25rem 1.25rem 1rem;box-shadow:0 2px 14px var(--shadow);}
+.fc-header{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;margin-bottom:.6rem;}
+.fc-nombre{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:400;color:var(--ink);}
+.fc-fecha{font-size:.68rem;color:var(--muted);white-space:nowrap;flex-shrink:0;}
+.fc-ded{font-size:.9rem;color:var(--muted);font-style:italic;line-height:1.65;margin-bottom:1rem;padding-left:.9rem;border-left:2px solid rgba(184,149,90,.35);}
+.fc-sep{height:1px;background:linear-gradient(90deg,rgba(184,149,90,.3),transparent);margin-bottom:.85rem;}
+.fc-img{display:block;width:100%;max-height:90px;object-fit:contain;object-position:left center;border-radius:4px;}
 
 /* ─── ADMIN ─── */
 .admin-wrap{text-align:center;padding:2rem 1.5rem 4rem;}
@@ -486,22 +479,9 @@ $("btn-firma").addEventListener("click",async()=>{
 
 function addFirmaDOM({nombre,ded,base64,fecha}){
   const d=document.createElement("div");d.className="firma-card";
-  let dedHTML="";
-  if(ded){
-    const id="ded-"+Date.now()+Math.random().toString(36).slice(2);
-    dedHTML=`<div class="fc-ded" id="${id}">"${ded}"</div>
-    <button class="fc-ver-mas" onclick="toggleDed(this)" style="display:none">Ver más ▾</button>`;
-  }
-  d.innerHTML=`<img src="${base64}" alt="Firma"/><div style="min-width:0;flex:1"><div class="fc-nombre">${nombre}</div>${dedHTML}<div class="fc-fecha">${fecha}</div></div>`;
+  const dedHTML=ded?`<div class="fc-ded">"${ded}"</div>`:"";
+  d.innerHTML=`<div class="fc-header"><div class="fc-nombre">${nombre}</div><div class="fc-fecha">${fecha}</div></div>${dedHTML}<div class="fc-sep"></div><img class="fc-img" src="${base64}" alt="Firma de ${nombre}" />`;
   $("firmas-lista").prepend(d);
-  /* mostrar botón solo si el texto se desborda */
-  if(ded){
-    const dedEl=d.querySelector(".fc-ded");
-    const btn=d.querySelector(".fc-ver-mas");
-    requestAnimationFrame(()=>{
-      if(dedEl.scrollHeight>dedEl.clientHeight+4) btn.style.display="block";
-    });
-  }
 }
 
 (async()=>{
@@ -539,12 +519,6 @@ $("btn-admin").addEventListener("click",async()=>{
       <h4 style="margin:1.5rem 0 .75rem">Todos los invitados</h4><table><thead><tr><th>Invitado</th><th>Segundo</th><th>Alergias</th></tr></thead><tbody>${filas}</tbody></table>`;
   }catch(err){$("admin-body").innerHTML="<p style='padding:1rem;color:red'>Error. Comprueba las reglas de Firestore.</p>";}
 });
-/* ── Ver más / Ver menos en dedicatorias ── */
-function toggleDed(btn){
-  const ded=btn.previousElementSibling;
-  const expandida=ded.classList.toggle("expandida");
-  btn.textContent=expandida?"Ver menos ▴":"Ver más ▾";
-}
 
 async function exportarXLSX(){
   const datos=window._adminDatos||[];
