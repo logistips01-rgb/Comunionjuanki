@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Fotos — Comunión de Juanki</title>
+  <meta name="theme-color" content="#b8955a" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --primario: #b8955a; --fondo: #0f0a05; --radio: 14px; }
+    html { scroll-behavior: smooth; }
+    body { min-height: 100dvh; font-family: system-ui, -apple-system, sans-serif; background: var(--fondo); color: #fff; overflow-x: hidden; }
+
+    /* ── CABECERA ── */
+    .cabecera { background: var(--primario); padding: 14px 20px 12px; box-shadow: 0 2px 20px rgba(0,0,0,.5); }
+    .cabecera-inner { display: flex; align-items: center; justify-content: space-between; max-width: 860px; margin: 0 auto; gap: 12px; flex-wrap: wrap; }
+    .cabecera-titulo { font-size: clamp(1.1rem,4vw,1.6rem); font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: #fff; }
+    .cabecera-sub { font-size: .82rem; color: rgba(255,255,255,.8); margin-top: 2px; }
+    .cabecera-btns { display: flex; gap: 8px; flex-shrink: 0; }
+    .btn-cab { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3); color: #fff; border-radius: 8px; padding: 7px 14px; font-size: .82rem; font-weight: 700; cursor: pointer; transition: background .2s; text-decoration: none; display: inline-flex; align-items: center; }
+    .btn-cab:hover { background: rgba(255,255,255,.28); }
+
+    /* ── FONDO DESENFOCADO ── */
+    #fondo { position: fixed; inset: 0; z-index: 0; background-image: url('https://images.unsplash.com/photo-1519741497674-611481863552?w=1200'); background-size: cover; background-position: center; filter: blur(10px) brightness(0.2); transform: scale(1.06); }
+
+    /* ── CONTENIDO PRINCIPAL ── */
+    #contenido { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 20px 12px 100px; }
+
+    /* ── ESTADO VACÍO ── */
+    #vacio { text-align: center; padding: 60px 20px; color: rgba(255,255,255,.4); }
+    #vacio .icono { font-size: 3.5rem; margin-bottom: 16px; }
+    #vacio p { font-size: 1rem; line-height: 1.6; }
+    #vacio.oculto { display: none; }
+
+    /* ── GRID MASONRY ── */
+    #grid { columns: 2; column-gap: 10px; }
+    @media (min-width: 600px) { #grid { columns: 3; } }
+    @media (min-width: 900px) { #grid { columns: 4; } }
+    .foto-card { break-inside: avoid; margin-bottom: 10px; border-radius: var(--radio); overflow: hidden; background: rgba(255,255,255,.06); cursor: pointer; transition: transform .2s; }
+    .foto-card:active { transform: scale(0.97); }
+    .foto-card img { width: 100%; display: block; border-radius: var(--radio) var(--radio) 0 0; }
+    .foto-card-footer { padding: 7px 10px; display: flex; align-items: center; justify-content: flex-end; }
+    .btn-comentarios { background: none; border: none; color: rgba(255,255,255,.6); font-size: .78rem; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .btn-comentarios:hover { color: #fff; }
+
+    /* ── FAB ── */
+    #fab { position: fixed; bottom: 24px; right: 20px; z-index: 40; width: 58px; height: 58px; background: var(--primario); border: none; border-radius: 50%; color: #fff; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 24px rgba(0,0,0,.6); transition: transform .15s; }
+    #fab:active { transform: scale(0.91); }
+
+    /* ── NOTIFICACIÓN NUEVA FOTO ── */
+    #nueva-foto-notif { position: fixed; bottom: 94px; right: 20px; z-index: 40; background: var(--primario); color: #fff; padding: 8px 14px; border-radius: 10px; font-size: .8rem; font-weight: 700; box-shadow: 0 4px 16px rgba(0,0,0,.5); opacity: 0; transform: translateY(8px); transition: opacity .3s, transform .3s; pointer-events: none; }
+    #nueva-foto-notif.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── MODAL FOTO + COMENTARIOS ── */
+    #modal-overlay { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.85); backdrop-filter: blur(6px); padding: 16px; align-items: center; justify-content: center; }
+    #modal-overlay.abierto { display: flex; }
+    #modal { background: #1a1208; border-radius: 20px; overflow: hidden; width: 100%; max-width: 540px; max-height: 90dvh; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,.1); }
+    #modal-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.08); flex-shrink: 0; }
+    #modal-header span { font-size: .85rem; opacity: .6; }
+    #btn-cerrar-modal { background: none; border: none; color: #fff; font-size: 1.3rem; cursor: pointer; opacity: .7; line-height: 1; }
+    #modal-foto { width: 100%; max-height: 50dvh; object-fit: contain; background: #000; flex-shrink: 0; }
+    #modal-comentarios-wrap { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 60px; }
+    .comentario { display: flex; flex-direction: column; gap: 2px; }
+    .comentario-autor { font-size: .78rem; font-weight: 700; color: var(--primario); }
+    .comentario-texto { font-size: .9rem; color: rgba(255,255,255,.85); line-height: 1.4; }
+    .comentario-hora { font-size: .7rem; color: rgba(255,255,255,.3); }
+    #sin-comentarios { text-align: center; color: rgba(255,255,255,.3); font-size: .85rem; padding: 20px 0; }
+    #modal-input-wrap { padding: 10px 16px 14px; border-top: 1px solid rgba(255,255,255,.08); display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+    #modal-input-fila { display: flex; gap: 8px; }
+    #input-nombre { width: 100px; flex-shrink: 0; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; padding: 10px 12px; color: #fff; font-size: .85rem; }
+    #input-nombre::placeholder { color: rgba(255,255,255,.3); }
+    #input-nombre:focus { outline: none; border-color: var(--primario); }
+    #input-comentario { flex: 1; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; padding: 10px 14px; color: #fff; font-size: .9rem; }
+    #input-comentario::placeholder { color: rgba(255,255,255,.35); }
+    #input-comentario:focus { outline: none; border-color: var(--primario); }
+    #btn-enviar-comentario { background: var(--primario); color: #fff; border: none; border-radius: 10px; padding: 10px 16px; font-size: .88rem; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+
+    /* ── MODAL SUBIR FOTO ── */
+    #modal-subir-overlay { display: none; position: fixed; inset: 0; z-index: 110; background: rgba(0,0,0,.9); backdrop-filter: blur(8px); align-items: flex-end; justify-content: center; }
+    #modal-subir-overlay.abierto { display: flex; }
+    #modal-subir { background: #1a1208; border-radius: 24px 24px 0 0; width: 100%; max-width: 480px; padding: 20px; display: flex; flex-direction: column; gap: 14px; border: 1px solid rgba(255,255,255,.1); border-bottom: none; }
+    #modal-subir h3 { font-size: 1rem; font-weight: 700; text-align: center; }
+    #zona-upload { width: 100%; aspect-ratio: 4/3; border: 2px dashed rgba(255,255,255,.2); border-radius: var(--radio); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; overflow: hidden; position: relative; }
+    #zona-upload:hover { border-color: var(--primario); }
+    #zona-upload .icono-upload { font-size: 2.5rem; }
+    #zona-upload p { color: rgba(255,255,255,.5); font-size: .88rem; text-align: center; }
+    #preview-subir { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+    #file-input { display: none; }
+    #btn-enviar-foto { width: 100%; padding: 14px; background: var(--primario); color: #fff; border: none; border-radius: var(--radio); font-size: 1rem; font-weight: 700; cursor: pointer; display: none; }
+    #btn-enviar-foto:disabled { opacity: .5; cursor: not-allowed; }
+    .barra-progreso-wrap { width: 100%; background: rgba(255,255,255,.1); border-radius: 4px; height: 5px; display: none; overflow: hidden; }
+    #barra-progreso { height: 100%; background: var(--primario); width: 0%; transition: width .2s; border-radius: 4px; }
+    #status-subir { font-size: .85rem; text-align: center; color: rgba(255,255,255,.6); min-height: 18px; }
+    #status-subir.ok  { color: #5ddb5d; font-weight: 700; }
+    #status-subir.err { color: #ff6b6b; }
+    #btn-cerrar-subir { background: none; border: none; color: rgba(255,255,255,.4); font-size: .85rem; cursor: pointer; text-align: center; padding: 4px; }
+
+    /* ── SLIDESHOW TV ── */
+    #modal-tv-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: #000; }
+    #modal-tv-overlay.abierto { display: block; }
+    #tv-slideshow { position: absolute; inset: 0; }
+    .tv-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s ease-in-out; }
+    .tv-slide.activa { opacity: 1; }
+    .tv-slide img { width: 100%; height: 100%; object-fit: cover; }
+    .tv-slide.activa img { animation: kenburns 8s ease-in-out forwards; }
+    @keyframes kenburns { 0% { transform: scale(1); } 100% { transform: scale(1.12) translate(-2%,-1.5%); } }
+    .tv-slide.activa.kb1 img { animation-name: kb1; }
+    @keyframes kb1 { 0% { transform: scale(1.08) translate(2%,1%); } 100% { transform: scale(1); } }
+    .tv-slide.activa.kb2 img { animation-name: kb2; }
+    @keyframes kb2 { 0% { transform: scale(1) translate(2%,-1%); } 100% { transform: scale(1.1) translate(-1%,1%); } }
+    .tv-slide.activa.kb3 img { animation-name: kb3; }
+    @keyframes kb3 { 0% { transform: scale(1.1) translate(-2%,1%); } 100% { transform: scale(1) translate(1%,-1%); } }
+    #tv-top { position: absolute; top: 0; left: 0; right: 0; z-index: 10; background: var(--primario); color: #fff; text-align: center; padding: 12px; font-size: clamp(1.2rem,3vw,2rem); font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+    #tv-bottom { position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; padding: 24px 28px 20px; display: flex; justify-content: space-between; align-items: flex-end; background: linear-gradient(to top, rgba(0,0,0,.85) 0%, transparent 100%); }
+    .tv-titulo { font-size: clamp(1rem,2.5vw,1.5rem); font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.9); }
+    #tv-contador { color: rgba(255,255,255,.7); font-size: 1rem; }
+    #btn-salir-tv { position: absolute; top: 70px; right: 16px; z-index: 20; background: rgba(0,0,0,.5); color: #fff; border: 1px solid rgba(255,255,255,.3); border-radius: 10px; padding: 8px 14px; font-size: .82rem; cursor: pointer; backdrop-filter: blur(6px); }
+    #btn-mute-tv  { position: absolute; top: 70px; right: 110px; z-index: 20; background: rgba(0,0,0,.5); color: #fff; border: 1px solid rgba(255,255,255,.3); border-radius: 10px; padding: 8px 14px; font-size: .82rem; cursor: pointer; backdrop-filter: blur(6px); }
+    #tv-comentarios { position: absolute; right: 20px; bottom: 80px; top: 100px; z-index: 15; width: clamp(220px,22vw,320px); display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; overflow: hidden; pointer-events: none; }
+    .tv-coment { background: rgba(0,0,0,.55); backdrop-filter: blur(4px); border-left: 3px solid var(--primario); border-radius: 8px; padding: 8px 12px; animation: subirComent 8s ease-out forwards; }
+    .tv-coment-autor { font-size: clamp(.7rem,1.2vw,.85rem); font-weight: 700; color: var(--primario); margin-bottom: 3px; }
+    .tv-coment-texto { font-size: clamp(.78rem,1.4vw,.95rem); color: #fff; line-height: 1.35; word-break: break-word; }
+    @keyframes subirComent { 0%{opacity:0;transform:translateY(20px)} 10%{opacity:1;transform:translateY(0)} 75%{opacity:1} 100%{opacity:0;transform:translateY(-40px)} }
+  </style>
+</head>
+<body>
+
+  <div id="fondo"></div>
+
+  <div class="cabecera">
+    <div class="cabecera-inner">
+      <div>
+        <div class="cabecera-titulo">📸 Fotos de la Comunión</div>
+        <div class="cabecera-sub">Comunión de Juanki · 23 mayo 2026</div>
+      </div>
+      <div class="cabecera-btns">
+        <button class="btn-cab" onclick="abrirTV()">▶ Pantalla</button>
+        <a class="btn-cab" href="index.html">← Inicio</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="contenido">
+    <div id="vacio">
+      <div class="icono">📸</div>
+      <p>Aún no hay fotos. ¡Sé el primero en subir la tuya!</p>
+    </div>
+    <div id="grid"></div>
+  </div>
+
+  <div id="nueva-foto-notif">📸 ¡Nueva foto!</div>
+  <button id="fab" onclick="abrirSubir()" title="Subir foto">📷</button>
+
+  <!-- Modal foto + comentarios -->
+  <div id="modal-overlay" onclick="cerrarModal(event)">
+    <div id="modal">
+      <div id="modal-header">
+        <span id="modal-hora"></span>
+        <button id="btn-cerrar-modal" onclick="cerrarModalDirecto()">✕</button>
+      </div>
+      <img id="modal-foto" src="" alt="Foto" />
+      <div id="modal-comentarios-wrap">
+        <div id="sin-comentarios">Sé el primero en comentar</div>
+      </div>
+      <div id="modal-input-wrap">
+        <div id="modal-input-fila">
+          <input id="input-nombre" type="text" placeholder="Tu nombre" maxlength="24" />
+          <input id="input-comentario" type="text" placeholder="Escribe un comentario..." maxlength="200" />
+          <button id="btn-enviar-comentario" onclick="enviarComentario()">Enviar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal subir foto -->
+  <div id="modal-subir-overlay" onclick="cerrarSubir(event)">
+    <div id="modal-subir">
+      <h3>Subir foto</h3>
+      <div id="zona-upload" onclick="document.getElementById('file-input').click()">
+        <span class="icono-upload">📷</span>
+        <p>Toca para elegir una foto<br>de tu galería o cámara</p>
+        <img id="preview-subir" alt="preview" />
+      </div>
+      <input type="file" id="file-input" accept="image/*" />
+      <div class="barra-progreso-wrap" id="barra-progreso-wrap">
+        <div id="barra-progreso"></div>
+      </div>
+      <button id="btn-enviar-foto" onclick="enviarFoto()">Subir foto</button>
+      <p id="status-subir"></p>
+      <button id="btn-cerrar-subir" onclick="cerrarSubirDirecto()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Slideshow TV -->
+  <div id="modal-tv-overlay">
+    <div id="tv-slideshow"></div>
+    <div id="tv-top">Comunión de Juanki</div>
+    <div id="tv-bottom">
+      <span class="tv-titulo">📸 El álbum de Juanki</span>
+      <span id="tv-contador"></span>
+    </div>
+    <div id="tv-comentarios"></div>
+    <button id="btn-salir-tv" onclick="cerrarTV()">✕ Salir</button>
+    <button id="btn-mute-tv" onclick="toggleMute()">🔊</button>
+    <!-- Pon aquí el fichero de música o elimina el elemento audio -->
+    <audio id="audio-tv" src="musica.mp3" loop preload="none"></audio>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script>
+    firebase.initializeApp({
+      apiKey:            "AIzaSyBpLUV25TLfwmxA4s3KoxIPnzJaK4b4LH0",
+      authDomain:        "juanki-cfec7.firebaseapp.com",
+      databaseURL:       "https://juanki-cfec7-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId:         "juanki-cfec7",
+      storageBucket:     "juanki-cfec7.firebasestorage.app",
+      messagingSenderId: "23536544926",
+      appId:             "1:23536544926:web:f782678cfba696a8c50428"
+    });
+    const db = firebase.database();
+    const LS_NOMBRE = 'comunion_juanki_foto_nombre';
+
+    const fotos = {}, contComentarios = {};
+    let fotoActualId = null;
+    const grid  = document.getElementById('grid');
+    const vacio = document.getElementById('vacio');
+    const notifEl = document.getElementById('nueva-foto-notif');
+
+    // ── Cargar fotos en tiempo real ──────────────────────
+    let primera = true;
+    db.ref('fotos').on('child_added', snap => {
+      const id = snap.key, data = snap.val();
+      if (!data || !data.img) return;
+      fotos[id] = data;
+      contComentarios[id] = 0;
+      vacio.classList.add('oculto');
+
+      const card = document.createElement('div');
+      card.className = 'foto-card'; card.id = 'card-' + id;
+      card.innerHTML = `
+        <img src="${data.img}" alt="Foto" loading="lazy" onclick="abrirFoto('${id}')" />
+        <div class="foto-card-footer">
+          <button class="btn-comentarios" onclick="abrirFoto('${id}')">💬 <span id="cont-${id}">0</span></button>
+        </div>`;
+      grid.prepend(card);
+
+      db.ref('comentarios/' + id).on('value', sc => {
+        let n = 0; sc.forEach(() => n++); contComentarios[id] = n;
+        const el = document.getElementById('cont-' + id); if (el) el.textContent = n;
+      });
+
+      agregarSlideTV(data.img);
+      if (!primera) flashNotif();
+      primera = false;
+    });
+
+    function flashNotif() {
+      notifEl.classList.add('visible');
+      setTimeout(() => notifEl.classList.remove('visible'), 3000);
+    }
+
+    // ── Modal foto + comentarios ─────────────────────────
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalFoto    = document.getElementById('modal-foto');
+    const comentWrap   = document.getElementById('modal-comentarios-wrap');
+    const sinComent    = document.getElementById('sin-comentarios');
+    const inputComent  = document.getElementById('input-comentario');
+    const inputNombre  = document.getElementById('input-nombre');
+    let comentariosListener = null;
+
+    inputNombre.value = localStorage.getItem(LS_NOMBRE) || '';
+
+    function abrirFoto(id) {
+      fotoActualId = id;
+      modalFoto.src = fotos[id].img;
+      document.getElementById('modal-hora').textContent =
+        new Date(fotos[id].ts).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+      modalOverlay.classList.add('abierto');
+      document.body.style.overflow = 'hidden';
+      comentWrap.querySelectorAll('.comentario').forEach(e => e.remove());
+      sinComent.style.display = '';
+
+      if (comentariosListener) { db.ref(comentariosListener).off(); comentariosListener = null; }
+      const ruta = 'comentarios/' + id;
+      comentariosListener = ruta;
+      db.ref(ruta).on('child_added', sc => {
+        const c = sc.val(); if (!c) return;
+        sinComent.style.display = 'none';
+        const div = document.createElement('div'); div.className = 'comentario';
+        const hora = new Date(c.ts).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+        div.innerHTML = `<span class="comentario-autor">${esc(c.autor)}</span><span class="comentario-texto">${esc(c.texto)}</span><span class="comentario-hora">${hora}</span>`;
+        comentWrap.appendChild(div);
+        comentWrap.scrollTop = comentWrap.scrollHeight;
+      });
+      inputComent.focus();
+    }
+
+    function cerrarModal(e) { if (e.target === modalOverlay) cerrarModalDirecto(); }
+    function cerrarModalDirecto() {
+      modalOverlay.classList.remove('abierto'); document.body.style.overflow = '';
+      if (comentariosListener) { db.ref(comentariosListener).off(); comentariosListener = null; }
+      fotoActualId = null;
+    }
+
+    function enviarComentario() {
+      const texto  = inputComent.value.trim();
+      const nombre = inputNombre.value.trim() || 'Invitado';
+      if (!texto || !fotoActualId) return;
+      localStorage.setItem(LS_NOMBRE, nombre);
+      db.ref('comentarios/' + fotoActualId).push({ autor: nombre, texto, ts: Date.now() });
+      inputComent.value = '';
+    }
+    inputComent.addEventListener('keydown', e => { if (e.key === 'Enter') enviarComentario(); });
+
+    // ── Modal subir foto ─────────────────────────────────
+    const modalSubirOverlay = document.getElementById('modal-subir-overlay');
+    const previewSubir      = document.getElementById('preview-subir');
+    const zonaUpload        = document.getElementById('zona-upload');
+    const btnEnviarFoto     = document.getElementById('btn-enviar-foto');
+    const statusSubir       = document.getElementById('status-subir');
+    const barraWrap         = document.getElementById('barra-progreso-wrap');
+    const barra             = document.getElementById('barra-progreso');
+    const fileInput         = document.getElementById('file-input');
+    let archivoSel = null;
+
+    function abrirSubir() {
+      modalSubirOverlay.classList.add('abierto'); document.body.style.overflow = 'hidden';
+    }
+    function cerrarSubir(e) { if (e.target === modalSubirOverlay) cerrarSubirDirecto(); }
+    function cerrarSubirDirecto() {
+      modalSubirOverlay.classList.remove('abierto'); document.body.style.overflow = '';
+      previewSubir.style.display = 'none'; previewSubir.src = '';
+      zonaUpload.querySelector('.icono-upload').style.display = '';
+      zonaUpload.querySelector('p').style.display = '';
+      btnEnviarFoto.style.display = 'none';
+      statusSubir.textContent = ''; statusSubir.className = '';
+      barraWrap.style.display = 'none'; barra.style.width = '0%';
+      btnEnviarFoto.disabled = false; archivoSel = null; fileInput.value = '';
+    }
+
+    fileInput.addEventListener('change', function () {
+      const file = this.files[0]; if (!file) return;
+      archivoSel = file;
+      previewSubir.src = URL.createObjectURL(file); previewSubir.style.display = 'block';
+      zonaUpload.querySelector('.icono-upload').style.display = 'none';
+      zonaUpload.querySelector('p').style.display = 'none';
+      btnEnviarFoto.style.display = 'block'; statusSubir.textContent = '';
+    });
+
+    function comprimir(file, cb) {
+      const MAX = 1400, img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+        else if (h > MAX)     { w = Math.round(w * MAX / h); h = MAX; }
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        cb(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.src = URL.createObjectURL(file);
+    }
+
+    function enviarFoto() {
+      if (!archivoSel) return;
+      btnEnviarFoto.disabled = true; statusSubir.textContent = 'Comprimiendo...';
+      barraWrap.style.display = 'block'; barra.style.width = '30%';
+      comprimir(archivoSel, base64 => {
+        barra.style.width = '70%'; statusSubir.textContent = 'Enviando...';
+        db.ref('fotos').push({ img: base64, ts: Date.now() })
+          .then(() => {
+            barra.style.width = '100%';
+            statusSubir.textContent = '¡Foto enviada! 📸';
+            statusSubir.className = 'ok';
+            setTimeout(cerrarSubirDirecto, 1400);
+          })
+          .catch(err => {
+            statusSubir.textContent = 'Error: ' + err.message;
+            statusSubir.className = 'err';
+            btnEnviarFoto.disabled = false;
+          });
+      });
+    }
+
+    // ── Slideshow TV con Ken Burns ───────────────────────
+    const tvModal       = document.getElementById('modal-tv-overlay');
+    const tvSlideshow   = document.getElementById('tv-slideshow');
+    const tvContador    = document.getElementById('tv-contador');
+    const tvComentarios = document.getElementById('tv-comentarios');
+    const audioTV       = document.getElementById('audio-tv');
+    const KB_TV = ['kb0','kb1','kb2','kb3'];
+    let tvSlides = [], tvKb = 0, tvTimer = null, mutedTV = false, tvComentListener = null;
+
+    function agregarSlideTV(src) {
+      const d = document.createElement('div'); d.className = 'tv-slide';
+      const i = document.createElement('img'); i.src = src;
+      d.appendChild(i); tvSlideshow.appendChild(d); tvSlides.push(d);
+      tvContador.textContent = tvSlides.length + (tvSlides.length === 1 ? ' foto' : ' fotos');
+    }
+
+    function mostrarSlideTV(idx) {
+      if (!tvSlides.length) return;
+      idx = ((idx % tvSlides.length) + tvSlides.length) % tvSlides.length;
+      tvSlides.forEach(s => {
+        s.classList.remove('activa','kb0','kb1','kb2','kb3');
+        const im = s.querySelector('img'); im.style.animation = 'none'; im.offsetHeight; im.style.animation = '';
+      });
+      tvSlides[idx].classList.add('activa', KB_TV[tvKb++ % KB_TV.length]);
+      clearTimeout(tvTimer); tvTimer = setTimeout(() => mostrarSlideTV(idx + 1), 6000);
+    }
+
+    function toggleMute() {
+      mutedTV = !mutedTV; audioTV.muted = mutedTV;
+      document.getElementById('btn-mute-tv').textContent = mutedTV ? '🔇' : '🔊';
+    }
+
+    function mostrarComentTV(autor, texto) {
+      const div = document.createElement('div'); div.className = 'tv-coment';
+      div.innerHTML = `<div class="tv-coment-autor">${esc(autor)}</div><div class="tv-coment-texto">${esc(texto)}</div>`;
+      tvComentarios.appendChild(div);
+      setTimeout(() => div.remove(), 8000);
+    }
+
+    function iniciarComentariosTV() {
+      const tsInicio = Date.now();
+      tvComentListener = true;
+      db.ref('comentarios').on('child_added', snapFoto => {
+        db.ref('comentarios/' + snapFoto.key).on('child_added', snapC => {
+          const c = snapC.val();
+          if (c && c.ts > tsInicio) mostrarComentTV(c.autor, c.texto);
+        });
+      });
+    }
+
+    function detenerComentariosTV() {
+      if (tvComentListener) { db.ref('comentarios').off(); tvComentListener = null; }
+      tvComentarios.innerHTML = '';
+    }
+
+    function abrirTV() {
+      if (!tvSlides.length) { alert('Aún no hay fotos para el pase.'); return; }
+      tvModal.classList.add('abierto'); document.body.style.overflow = 'hidden';
+      mostrarSlideTV(0);
+      audioTV.currentTime = 0; audioTV.play().catch(() => {});
+      iniciarComentariosTV();
+      if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+    }
+
+    function cerrarTV() {
+      tvModal.classList.remove('abierto'); document.body.style.overflow = '';
+      clearTimeout(tvTimer);
+      audioTV.pause(); audioTV.currentTime = 0;
+      detenerComentariosTV();
+      if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen();
+    }
+
+    function esc(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>
