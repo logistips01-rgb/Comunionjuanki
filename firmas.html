@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Firmas — Comunión de Juanki</title>
+  <meta name="theme-color" content="#b8955a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink:    #1a1a1a;
+      --soft:   #f7f5f2;
+      --warm:   #f0ebe3;
+      --accent: #b8955a;
+      --accent2:#d4b483;
+      --muted:  #8a7d6e;
+      --white:  #ffffff;
+      --shadow: rgba(26,26,26,.08);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--soft); color: var(--ink); overflow-x: hidden; min-height: 100dvh; }
+
+    /* ── NAV ── */
+    .nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(247,245,242,.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(184,149,90,.18);
+      padding: .65rem 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-back { font-size: .78rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color .2s; }
+    .nav-back:hover { color: var(--accent); }
+    .nav-title { font-family: 'Cormorant Garamond', serif; font-size: 1rem; font-weight: 400; color: var(--accent); letter-spacing: .06em; }
+    .nav-right { width: 80px; }
+
+    /* ── CABECERA ── */
+    .page-header {
+      max-width: 720px; margin: 0 auto;
+      padding: 3.5rem 1.5rem 2rem;
+    }
+    .sec-eyebrow { font-size: .68rem; font-weight: 500; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); margin-bottom: .75rem; }
+    .sec-titulo { font-family: 'Cormorant Garamond', serif; font-size: clamp(2rem,5vw,3rem); font-weight: 300; color: var(--ink); line-height: 1.1; margin-bottom: .5rem; }
+    .sec-titulo em { font-style: italic; color: var(--accent); }
+    .sec-linea { width: 32px; height: 1px; background: var(--accent); margin: 1.25rem 0 1.5rem; }
+    .sec-desc { font-size: .9rem; color: var(--muted); line-height: 1.7; }
+
+    /* ── CONTADOR ── */
+    .contador {
+      display: inline-flex; align-items: baseline; gap: .45rem;
+      margin-top: 1.5rem;
+      font-size: .82rem; color: var(--muted);
+    }
+    .contador strong { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 300; color: var(--accent); line-height: 1; }
+
+    /* ── SEPARADOR ── */
+    .sep { height: 1px; background: linear-gradient(90deg, transparent, rgba(184,149,90,.25), transparent); margin: 0 1.5rem 2rem; }
+
+    /* ── GRID ── */
+    .firmas-grid {
+      max-width: 960px; margin: 0 auto;
+      padding: 0 1.25rem 4rem;
+      columns: 2 360px; column-gap: 1.25rem;
+    }
+    .firma-card {
+      break-inside: avoid;
+      background: var(--white);
+      border: 1px solid rgba(184,149,90,.18);
+      border-radius: 14px;
+      padding: 1.35rem 1.35rem 1.1rem;
+      box-shadow: 0 2px 16px var(--shadow);
+      margin-bottom: 1.25rem;
+      transition: box-shadow .2s;
+    }
+    .firma-card:hover { box-shadow: 0 6px 28px rgba(184,149,90,.14); }
+    .fc-header { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; margin-bottom: .7rem; }
+    .fc-nombre { font-family: 'Cormorant Garamond', serif; font-size: 1.35rem; font-weight: 400; color: var(--ink); }
+    .fc-fecha { font-size: .68rem; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+    .fc-ded {
+      font-size: .9rem; color: var(--muted); font-style: italic;
+      line-height: 1.7; margin-bottom: 1rem;
+      padding-left: .9rem;
+      border-left: 2px solid rgba(184,149,90,.4);
+    }
+    .fc-sep { height: 1px; background: linear-gradient(90deg, rgba(184,149,90,.3), transparent); margin-bottom: .9rem; }
+    .fc-img { display: block; width: 100%; max-height: 100px; object-fit: contain; object-position: left center; border-radius: 4px; }
+
+    /* ── ESTADO VACÍO ── */
+    #vacio { max-width: 720px; margin: 0 auto; text-align: center; padding: 4rem 1.5rem; color: var(--muted); display: none; }
+    #vacio .ico { font-size: 3rem; margin-bottom: 1rem; }
+    #vacio p { font-size: .9rem; line-height: 1.7; }
+    #vacio a { color: var(--accent); text-decoration: none; font-weight: 500; }
+
+    /* ── CARGANDO ── */
+    #cargando { max-width: 720px; margin: 3rem auto; text-align: center; color: var(--muted); font-size: .85rem; letter-spacing: .05em; }
+    .spinner { display: inline-block; width: 28px; height: 28px; border: 2px solid rgba(184,149,90,.25); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; margin-bottom: .75rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 480px) {
+      .firmas-grid { columns: 1; }
+      .fc-img { max-height: 80px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-back" href="index.html">← Inicio</a>
+  <span class="nav-title">Comunión de Juanki</span>
+  <span class="nav-right"></span>
+</nav>
+
+<div class="page-header">
+  <p class="sec-eyebrow">Comunión de Juanki · 23 mayo 2026</p>
+  <h1 class="sec-titulo">Palabras con <em>cariño</em></h1>
+  <div class="sec-linea"></div>
+  <p class="sec-desc">Cada firma es un abrazo, cada palabra un recuerdo que Juanki guardará para siempre. Gracias por estar aquí.</p>
+  <div class="contador"><strong id="num-firmas">—</strong> personas han firmado</div>
+</div>
+
+<div class="sep"></div>
+
+<div id="cargando"><div class="spinner"></div><br>Cargando firmas…</div>
+<div id="vacio">
+  <div class="ico">✍️</div>
+  <p>Todavía no hay firmas.<br><a href="index.html#sec-firmas">Sé el primero en dejar una dedicatoria.</a></p>
+</div>
+<div class="firmas-grid" id="firmas-grid"></div>
+
+<script type="module">
+  const FB = {
+    apiKey:            "AIzaSyBpLUV25TLfwmxA4s3KoxIPnzJaK4b4LH0",
+    authDomain:        "juanki-cfec7.firebaseapp.com",
+    databaseURL:       "https://juanki-cfec7-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId:         "juanki-cfec7",
+    storageBucket:     "juanki-cfec7.firebasestorage.app",
+    messagingSenderId: "23536544926",
+    appId:             "1:23536544926:web:f782678cfba696a8c50428"
+  };
+
+  let _app, _db;
+  async function getApp(){
+    if(_app) return _app;
+    const{initializeApp,getApps}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    _app=getApps().length?getApps()[0]:initializeApp(FB);
+    return _app;
+  }
+  async function getDB(){
+    if(_db) return _db;
+    const{getFirestore}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    _db=getFirestore(await getApp());
+    return _db;
+  }
+
+  function esc(s){ const d=document.createElement("div");d.textContent=s;return d.innerHTML; }
+
+  function renderCard({nombre, ded, base64, fecha}){
+    const card = document.createElement("div");
+    card.className = "firma-card";
+    const dedHTML = ded ? `<div class="fc-ded">"${esc(ded)}"</div>` : "";
+    card.innerHTML = `
+      <div class="fc-header">
+        <div class="fc-nombre">${esc(nombre)}</div>
+        <div class="fc-fecha">${esc(fecha)}</div>
+      </div>
+      ${dedHTML}
+      <div class="fc-sep"></div>
+      <img class="fc-img" src="${base64}" alt="Firma de ${esc(nombre)}" />
+    `;
+    return card;
+  }
+
+  (async () => {
+    try {
+      const { collection, getDocs, orderBy, query } =
+        await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+      const snap = await getDocs(
+        query(collection(await getDB(), "firmas"), orderBy("timestamp", "desc"))
+      );
+      document.getElementById("cargando").style.display = "none";
+      if (snap.empty) {
+        document.getElementById("vacio").style.display = "block";
+        document.getElementById("num-firmas").textContent = "0";
+        return;
+      }
+      const grid = document.getElementById("firmas-grid");
+      let count = 0;
+      snap.forEach(doc => {
+        const d = doc.data();
+        grid.appendChild(renderCard({
+          nombre: d.nombre,
+          ded:    d.dedicatoria || "",
+          base64: d.base64,
+          fecha:  d.timestamp?.toDate().toLocaleDateString("es-ES") || ""
+        }));
+        count++;
+      });
+      document.getElementById("num-firmas").textContent = count;
+    } catch(e) {
+      console.error(e);
+      document.getElementById("cargando").innerHTML =
+        "<p style='color:var(--muted)'>No se pudieron cargar las firmas.</p>";
+    }
+  })();
+</script>
+</body>
+</html>
