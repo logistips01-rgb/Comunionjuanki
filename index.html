@@ -184,38 +184,6 @@ body{
 }
 .campo textarea{resize:vertical;line-height:1.6;}
 
-/* ─── PLATOS ─── */
-.grupo-titulo{
-  font-family:'Cormorant Garamond',serif;
-  font-size:1.1rem;font-weight:400;font-style:italic;
-  color:var(--muted);margin:2rem 0 .75rem;
-  padding-bottom:.5rem;
-  border-bottom:1px solid rgba(184,149,90,.2);
-}
-.plato{
-  display:flex;align-items:center;gap:.85rem;
-  padding:.8rem 1rem;border-radius:8px;
-  border:1px solid rgba(184,149,90,.2);
-  margin-bottom:.5rem;cursor:pointer;
-  transition:all .18s;background:var(--white);
-  user-select:none;
-}
-.plato:hover{border-color:var(--accent);background:#fffdf9;transform:translateX(3px);}
-.plato.sel{
-  border-color:var(--accent);
-  background:linear-gradient(135deg,#fffdf9,#fdf7ec);
-  box-shadow:0 2px 12px rgba(184,149,90,.15);
-}
-.plato input[type=radio]{display:none;}
-.dot{
-  width:18px;height:18px;min-width:18px;border-radius:50%;
-  border:1.5px solid rgba(184,149,90,.4);
-  display:flex;align-items:center;justify-content:center;
-  font-size:.6rem;color:transparent;transition:all .18s;
-}
-.plato.sel .dot{background:var(--accent);border-color:var(--accent);color:#fff;}
-.plato.sel .pnombre{font-weight:500;}
-.pnombre{font-size:.9rem;line-height:1.35;}
 
 /* ─── BOTÓN ─── */
 .btn-main{
@@ -239,11 +207,6 @@ body{
 }
 .btn-sec:hover{border-color:var(--accent);color:var(--accent);}
 
-/* ─── ÉXITO ─── */
-#exito{display:none;text-align:center;padding:3rem 1rem;}
-#exito .ico{font-size:3rem;margin-bottom:1rem;}
-#exito h3{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:300;margin-bottom:.5rem;}
-#exito p{color:var(--muted);font-size:.9rem;}
 
 /* ─── SEPARADOR ─── */
 .sep{
@@ -264,10 +227,11 @@ body{
 #album-vacio{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.9rem;line-height:1.7;}
 #album-vacio .ico{font-size:2.5rem;margin-bottom:.75rem;}
 #album-vacio.hidden{display:none;}
-/* FAB */
-#fab-foto{position:fixed;bottom:1.5rem;right:1.5rem;z-index:200;width:56px;height:56px;background:var(--accent);border:none;border-radius:50%;color:#fff;font-size:1.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(184,149,90,.5);transition:transform .15s;}
-#fab-foto:active{transform:scale(.92);}
-#notif-nueva{position:fixed;bottom:5rem;right:1.5rem;z-index:200;background:var(--accent);color:#fff;padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:500;box-shadow:0 4px 16px rgba(184,149,90,.4);opacity:0;transform:translateY(8px);transition:opacity .3s,transform .3s;pointer-events:none;}
+/* Botón subir foto en sección */
+.btn-subir-seccion{display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.75rem;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:500;cursor:pointer;transition:background .2s,transform .15s;margin-bottom:1.5rem;}
+.btn-subir-seccion:hover{background:#a07a44;transform:translateY(-1px);}
+.btn-subir-seccion:active{transform:scale(.97);}
+#notif-nueva{position:fixed;bottom:1.5rem;right:1.5rem;z-index:200;background:var(--accent);color:#fff;padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:500;box-shadow:0 4px 16px rgba(184,149,90,.4);opacity:0;transform:translateY(8px);transition:opacity .3s,transform .3s;pointer-events:none;}
 #notif-nueva.visible{opacity:1;transform:translateY(0);}
 /* Modal foto + comentarios */
 #modal-foto-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(26,26,26,.85);backdrop-filter:blur(6px);padding:1rem;align-items:center;justify-content:center;}
@@ -423,76 +387,17 @@ body{
 
 <!-- ══ NAV ══ -->
 <nav class="sticky-nav">
-  <a href="#sec-menu">Menú</a>
   <a href="#sec-fotos">Fotos</a>
   <a href="#sec-firmas">Firmar</a>
 </nav>
-
-<!-- ══ MENÚ ══ -->
-<section class="seccion" id="sec-menu">
-  <p class="sec-eyebrow">El banquete</p>
-  <h2 class="sec-titulo">Elige tu <em>segundo plato</em></h2>
-  <div class="sec-linea"></div>
-  <p class="sec-desc">Cuéntanos qué te apetece para que todo salga perfecto el gran día.</p>
-  <div style="display:flex;align-items:flex-start;gap:.6rem;margin-bottom:1.75rem;padding:.9rem 1.1rem;background:var(--warm);border-radius:8px;border-left:3px solid var(--accent);">
-    <div>
-      <p style="font-size:.78rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:.3rem;">📍 Lugar del banquete</p>
-      <p style="font-size:.92rem;color:var(--ink);font-weight:500;">Restaurante Casa Agustín · Calle La Cadena</p>
-      <p style="font-size:.85rem;color:var(--muted);margin-top:.15rem;">🕑 A las 14:00 horas</p>
-    </div>
-  </div>
-
-  <form id="form-menu">
-    <div class="campo">
-      <label for="nombre">Tu nombre completo</label>
-      <input type="text" id="nombre" placeholder="María García López" autocomplete="name"/>
-    </div>
-
-    <p class="grupo-titulo">Carnes</p>
-    <label class="plato"><input type="radio" name="segundo" value="Costillas de ternasco a la brasa"><span class="dot">✓</span><span class="pnombre">Costillas de ternasco a la brasa</span></label>
-    <label class="plato"><input type="radio" name="segundo" value="Paletilla de ternasco al horno (½ paletilla)"><span class="dot">✓</span><span class="pnombre">Paletilla de ternasco al horno <em>(½ paletilla)</em></span></label>
-    <label class="plato"><input type="radio" name="segundo" value="Codornices a la brasa"><span class="dot">✓</span><span class="pnombre">Codornices a la brasa</span></label>
-    <label class="plato"><input type="radio" name="segundo" value="Conejo a la brasa"><span class="dot">✓</span><span class="pnombre">Conejo a la brasa</span></label>
-    <label class="plato"><input type="radio" name="segundo" value="Solomillo de cerdo a la brasa"><span class="dot">✓</span><span class="pnombre">Solomillo de cerdo a la brasa</span></label>
-    <label class="plato"><input type="radio" name="segundo" value="Entrecot de vaca"><span class="dot">✓</span><span class="pnombre">Entrecot de vaca</span></label>
-
-    <p class="grupo-titulo">Pescados</p>
-    <label class="plato"><input type="radio" name="segundo" value="Dorada al horno con verduritas"><span class="dot">✓</span><span class="pnombre">Dorada al horno con verduritas</span></label>
-    <label class="plato"><input type="radio" name="segundo" value="Lubina al horno en salsa vinagreta"><span class="dot">✓</span><span class="pnombre">Lubina al horno en salsa vinagreta</span></label>
-    <label class="plato"><input type="radio" name="segundo" value="Merluza a la plancha con mahonesa y pimiento del piquillo (2 rodajas)"><span class="dot">✓</span><span class="pnombre">Merluza a la plancha con mahonesa y pimiento del piquillo <em>(2 rodajas)</em></span></label>
-
-    <!-- Alergias -->
-    <div class="campo" style="margin-top:1.5rem">
-      <label for="alergias">¿Tienes alguna alergia o intolerancia? <span style="font-weight:300;text-transform:none;letter-spacing:0">(opcional)</span></label>
-      <input type="text" id="alergias" placeholder="Ej: gluten, lactosa, marisco…"/>
-    </div>
-
-    <!-- Menú infantil -->
-    <label style="display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;border-radius:8px;border:1px solid rgba(184,149,90,.2);background:#fff;cursor:pointer;margin-bottom:.5rem;user-select:none;">
-      <input type="checkbox" id="menu-infantil" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
-      <span>
-        <strong style="font-size:.9rem;color:var(--ink)">Menú infantil</strong>
-        <span style="display:block;font-size:.78rem;color:var(--muted);margin-top:.1rem">Marca esta opción si es para un niño</span>
-      </span>
-    </label>
-
-    <button type="submit" class="btn-main" id="btn-enviar">Confirmar mi elección</button>
-  </form>
-  <div id="exito">
-    <div class="ico">🎊</div>
-    <h3>¡Muchas gracias!</h3>
-    <p>Nos vemos en la comunión de Juanki 🙏</p>
-  </div>
-</section>
-
-<div class="sep"></div>
 
 <!-- ══ FOTOS ══ -->
 <section class="seccion" id="sec-fotos">
   <p class="sec-eyebrow">El álbum</p>
   <h2 class="sec-titulo">¿Hiciste una foto <em>chula?</em></h2>
   <div class="sec-linea"></div>
-  <p class="sec-desc">Súbela con el botón 📷 y mira todas las del álbum. ¡Puedes comentar las fotos de los demás!</p>
+  <p class="sec-desc">Mira todas las fotos del gran día y comenta las que más te gusten. ¿Tienes una foto chula? ¡Súbela!</p>
+  <button class="btn-subir-seccion" onclick="abrirSubirFoto()">📷 Subir una foto</button>
   <div id="album-vacio">
     <div class="ico">📷</div>
     <p>Aún no hay fotos.<br>¡Sé el primero en subir la tuya!</p>
@@ -500,8 +405,6 @@ body{
   <div id="album-grid"></div>
 </section>
 
-<!-- FAB + notificación -->
-<button id="fab-foto" onclick="abrirSubirFoto()" title="Subir foto">📷</button>
 <div id="notif-nueva">📸 ¡Nueva foto!</div>
 
 <!-- Modal foto + comentarios -->
@@ -644,46 +547,6 @@ async function actualizarContador(){
 }
 actualizarContador();
 
-/* ── Menú ── */
-document.querySelectorAll(".plato").forEach(l=>{
-  l.addEventListener("click",()=>{
-    document.querySelectorAll(".plato").forEach(x=>x.classList.remove("sel"));
-    l.classList.add("sel");
-  });
-});
-
-/* ── Menú infantil oculta selección de platos ── */
-document.getElementById("menu-infantil").addEventListener("change", function(){
-  const platos=document.querySelectorAll(".grupo-titulo,.plato");
-  platos.forEach(p=>p.style.opacity=this.checked?"0.3":"1");
-  if(this.checked) document.querySelectorAll(".plato").forEach(p=>p.classList.remove("sel"));
-});
-
-$("form-menu").addEventListener("submit",async e=>{
-  e.preventDefault();
-  const nombre=$("nombre").value.trim();
-  const infantil=document.getElementById("menu-infantil").checked;
-  const radio=document.querySelector('input[name="segundo"]:checked');
-  const alergias=$("alergias").value.trim();
-  if(!nombre){toast("Escribe tu nombre primero","err");return;}
-  if(!infantil&&!radio){toast("Elige un plato","err");return;}
-  const btn=$("btn-enviar");btn.disabled=true;btn.textContent="Guardando…";
-  try{
-    const{collection,addDoc,serverTimestamp}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-    await addDoc(collection(await getDB(),"respuestas"),{
-      nombre,
-      segundo: infantil?"🧒 Menú infantil":radio.value,
-      alergias: alergias||"—",
-      infantil,
-      timestamp:serverTimestamp()
-    });
-    $("form-menu").style.display="none";$("exito").style.display="block";
-    actualizarContador();
-  }catch(err){
-    console.error(err);toast("Error al guardar","err");
-    btn.disabled=false;btn.textContent="Confirmar mi elección";
-  }
-});
 
 /* ── Álbum de fotos ── */
 const LS_NOMBRE_FOTO="comunion_foto_nombre";
