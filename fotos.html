@@ -407,13 +407,8 @@
     const tvCnt     = document.getElementById('tv-cnt');
     const tvComEl   = document.getElementById('tv-comentarios');
     const audioTV   = document.getElementById('audio-tv');
-    const playlist  = ['musica1.mp3', 'musica2.mp3'];
-    let playIdx = 0;
-    audioTV.addEventListener('ended', () => {
-      playIdx = (playIdx + 1) % playlist.length;
-      audioTV.src = playlist[playIdx];
-      audioTV.play().catch(() => {});
-    });
+    audioTV.src = 'musica1.mp3';
+    audioTV.loop = true;
     let slides = [], tvTimer = null, mutedTV = false, tvComOff = null;
 
     function agregarSlideTV(src) {
@@ -460,7 +455,7 @@
       if (!slides.length) { alert('Aún no hay fotos para el pase.'); return; }
       tvModal.classList.add('open'); document.body.style.overflow = 'hidden';
       mostrarSlide(0);
-      playIdx = 0; audioTV.src = playlist[0]; audioTV.currentTime = 0; audioTV.play().catch(() => {});
+      audioTV.currentTime = 0; audioTV.play().catch(() => {});
       iniciarComTV();
       if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
     }
