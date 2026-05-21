@@ -229,14 +229,6 @@ body{
   border:2px solid transparent;transition:transform .15s;
 }
 .cdot:hover,.cdot.act{transform:scale(1.25);border-color:var(--ink);}
-#firmas-lista{display:flex;flex-direction:column;gap:1.25rem;margin-top:2rem;}
-.firma-card{background:var(--white);border:1px solid rgba(184,149,90,.18);border-radius:12px;padding:1.25rem 1.25rem 1rem;box-shadow:0 2px 14px var(--shadow);}
-.fc-header{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;margin-bottom:.6rem;}
-.fc-nombre{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:400;color:var(--ink);}
-.fc-fecha{font-size:.68rem;color:var(--muted);white-space:nowrap;flex-shrink:0;}
-.fc-ded{font-size:.9rem;color:var(--muted);font-style:italic;line-height:1.65;margin-bottom:1rem;padding-left:.9rem;border-left:2px solid rgba(184,149,90,.35);}
-.fc-sep{height:1px;background:linear-gradient(90deg,rgba(184,149,90,.3),transparent);margin-bottom:.85rem;}
-.fc-img{display:block;width:100%;max-height:90px;object-fit:contain;object-position:left center;border-radius:4px;}
 
 /* ─── ADMIN ─── */
 .admin-wrap{text-align:center;padding:2rem 1.5rem 4rem;}
@@ -322,6 +314,7 @@ body{
 <nav class="sticky-nav">
   <a href="fotos.html">Fotos</a>
   <a href="#sec-firmas">Firmar</a>
+  <a href="firmas.html">Dedicatorias</a>
 </nav>
 
 <!-- ══ FIRMAS ══ -->
@@ -346,7 +339,10 @@ body{
       <div class="cdot" data-c="#1a3a7a" style="background:#1a3a7a"></div>
     </div>
   </div>
-  <div id="firmas-lista"></div>
+  <div id="firmas-cta" style="margin-top:2rem;display:none">
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:1rem"><span id="num-firmas" style="font-family:'Cormorant Garamond',serif;font-size:1.6rem;color:var(--accent);font-weight:300"></span> personas ya han dejado su dedicatoria</p>
+    <a href="firmas.html" class="btn-main" style="display:inline-block;text-decoration:none;text-align:center;padding:.75rem 1.75rem">Ver dedicatorias →</a>
+  </div>
 </section>
 
 <!-- ══ ADMIN ══ -->
@@ -469,7 +465,7 @@ $("btn-firma").addEventListener("click",async()=>{
     const base64=cv.toDataURL("image/png");
     const{collection,addDoc,serverTimestamp}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     await addDoc(collection(await getDB(),"firmas"),{nombre,dedicatoria:ded,base64,timestamp:serverTimestamp()});
-    addFirmaDOM({nombre,ded,base64,fecha:new Date().toLocaleDateString("es-ES")});
+    addFirmaDOM();
     ctx.clearRect(0,0,cv.width,cv.height);
     $("firma-nombre").value="";$("firma-ded").value="";
     toast("¡Firma guardada! ✍️");
@@ -477,21 +473,22 @@ $("btn-firma").addEventListener("click",async()=>{
   btn.disabled=false;btn.textContent="Guardar firma";
 });
 
-function addFirmaDOM({nombre,ded,base64,fecha}){
-  const d=document.createElement("div");d.className="firma-card";
-  const dedHTML=ded?`<div class="fc-ded">"${ded}"</div>`:"";
-  d.innerHTML=`<div class="fc-header"><div class="fc-nombre">${nombre}</div><div class="fc-fecha">${fecha}</div></div>${dedHTML}<div class="fc-sep"></div><img class="fc-img" src="${base64}" alt="Firma de ${nombre}" />`;
-  $("firmas-lista").prepend(d);
+function addFirmaDOM(){
+  const cta=$("firmas-cta");
+  const num=$("num-firmas");
+  num.textContent=(parseInt(num.textContent||"0")+1).toString();
+  cta.style.display="block";
 }
 
 (async()=>{
   try{
-    const{collection,getDocs,orderBy,query}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-    const snap=await getDocs(query(collection(await getDB(),"firmas"),orderBy("timestamp","desc")));
-    snap.forEach(doc=>{
-      const d=doc.data();
-      addFirmaDOM({nombre:d.nombre,ded:d.dedicatoria||"",base64:d.base64,fecha:d.timestamp?.toDate().toLocaleDateString("es-ES")||""});
-    });
+    const{collection,getCountFromServer}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const snap=await getCountFromServer(collection(await getDB(),"firmas"));
+    const count=snap.data().count;
+    if(count>0){
+      $("num-firmas").textContent=count;
+      $("firmas-cta").style.display="block";
+    }
   }catch{}
 })();
 
