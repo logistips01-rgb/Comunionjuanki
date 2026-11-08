@@ -59,6 +59,13 @@
 
     .contador { text-align: center; color: var(--gris); font-size: .85rem; font-weight: 700; }
     input[type=file] { display: none; }
+    .rapida { background: #fff; border: 2px solid var(--amar); border-radius: 18px; padding: 1rem; display: flex; flex-direction: column; gap: .6rem; }
+    .rapida h3 { font-size: 1.1rem; }
+    .rapida p { font-size: .88rem; color: var(--gris); line-height: 1.45; }
+    .rapida-btns { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+    .rapida-btns .btn { font-size: .85rem; padding: .7rem .5rem; }
+    #estado-lote { font-weight: 800; color: var(--tinta); text-align: center; }
+    #estado-lote:empty { display: none; }
   </style>
 </head>
 <body>
@@ -77,6 +84,16 @@
         <p>Se abrirá la cámara del móvil</p>
       </div>
       <button class="btn btn-claro btn-bloque" onclick="document.getElementById('in-galeria').click()">🖼️ Elegir fotos de la galería (puedes elegir varias)</button>
+      <div class="rapida">
+        <h3>⚡ Subida rápida</h3>
+        <p>Sube muchas fotos de golpe <b>sin rellenar nada</b>. Quedan como <b>pendientes</b> y Claude rellenará las fichas (nombre, colección, número, rareza, valor…).</p>
+        <div class="rapida-btns">
+          <button class="btn btn-amar" onclick="document.getElementById('in-rapida-cam').click()">📸 Foto a foto</button>
+          <button class="btn btn-amar" onclick="document.getElementById('in-rapida').click()">🖼️ Varias de la galería</button>
+        </div>
+        <div class="barra" id="barra-lote"><div></div></div>
+        <p id="estado-lote"></p>
+      </div>
       <div class="consejo">💡 <b>Consejo:</b> pon la carta sobre una mesa lisa, con buena luz y sin reflejos, y que ocupe casi toda la foto.</div>
       <p class="contador" id="contador"></p>
     </section>
@@ -160,12 +177,16 @@
         <div class="barra" id="barra"><div></div></div>
         <p id="estado"></p>
         <button class="btn btn-rojo btn-bloque" id="btn-guardar" onclick="guardar()">💾 Guardar en el álbum</button>
+        <button class="btn btn-amar btn-bloque" id="btn-rapido" onclick="guardarRapido()">⚡ Guardar sin datos (los rellena Claude)</button>
+        <button class="btn btn-claro btn-bloque" id="btn-lote" onclick="subirRestoRapido()" hidden></button>
       </div>
     </section>
   </main>
 
   <input type="file" id="in-camara" accept="image/*" capture="environment" />
   <input type="file" id="in-galeria" accept="image/*" multiple />
+  <input type="file" id="in-rapida" accept="image/*" multiple />
+  <input type="file" id="in-rapida-cam" accept="image/*" capture="environment" />
   <div id="toast"></div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -207,7 +228,9 @@
     /* ── Contador total ── */
     conPin(() => db.ref(REF_META).on('value', s => {
       const n = s.numChildren();
-      $('contador').textContent = n ? `Ya hay ${n} carta${n === 1 ? '' : 's'} en el álbum` : 'El álbum está vacío. ¡Empieza con tu primera carta!';
+      let pend = 0; s.forEach(c => { if (c.val().pendiente) pend++; });
+      $('contador').textContent = (n ? `Ya hay ${n} carta${n === 1 ? '' : 's'} en el álbum` : 'El álbum está vacío. ¡Empieza con tu primera carta!')
+        + (pend ? ` · ⏳ ${pend} pendiente${pend === 1 ? '' : 's'} de rellenar` : '');
     }));
 
     /* ── Selección de fotos ── */
@@ -230,6 +253,8 @@
       $('previa-img').src = URL.createObjectURL(actual);
       $('cola').hidden = cola.length === 0;
       $('cola').textContent = `+${cola.length} en cola`;
+      $('btn-lote').hidden = cola.length === 0;
+      $('btn-lote').textContent = `⚡ Subir esta y las ${cola.length} restantes sin datos`;
       limpiarFormulario();
       $('paso-foto').style.display = 'none';
       $('paso-datos').classList.add('ver');
@@ -256,7 +281,7 @@
       $('buscar-estado').textContent = 'Escribe el nombre y toca la carta que coincida: se rellenan los datos solos.';
       $('estado').textContent = ''; $('estado').className = '';
       $('barra').style.display = 'none';
-      $('btn-guardar').disabled = false;
+      bloquear(false);
     }
 
     /* ── Búsqueda en el catálogo (TCGdex, en español, con precios de Cardmarket) ── */
@@ -347,21 +372,13 @@
       if (!actual) return;
       const nombre = $('f-nombre').value.trim();
       if (!nombre) { $('f-nombre').focus(); toast('✏️ Ponle un nombre a la carta'); return; }
-      $('btn-guardar').disabled = true;
+      bloquear(true);
       $('barra').style.display = 'block';
       const barra = $('barra').firstElementChild;
       const estado = $('estado');
-      estado.className = ''; estado.textContent = 'Preparando la foto…'; barra.style.width = '20%';
+      estado.className = ''; estado.textContent = 'Subiendo…'; barra.style.width = '40%';
       try {
-        const [img, thumb] = await Promise.all([
-          imagenABase64(actual, 1100, 0.82, rot),
-          imagenABase64(actual, 320, 0.72, rot),
-        ]);
-        barra.style.width = '55%'; estado.textContent = 'Subiendo…';
-        const id = db.ref(REF_META).push().key;
-        await db.ref().update({
-          [`${REF_IMG}/${id}`]: img,
-          [`${REF_META}/${id}`]: {
+        await subirCarta(actual, rot, {
             nombre,
             tipo: tipoSel || 'Incoloro',
             ps: Number($('f-ps').value) || 0,
@@ -373,9 +390,6 @@
             cantidad: Math.max(1, Number($('f-cantidad').value) || 1),
             notas: $('f-notas').value.trim(),
             precio: Number($('f-precio').value) || 0,
-            thumb,
-            ts: firebase.database.ServerValue.TIMESTAMP,
-          }
         });
         barra.style.width = '100%';
         estado.className = 'ok'; estado.textContent = `¡${nombre} guardada! 🎉`;
@@ -383,9 +397,71 @@
         setTimeout(siguiente, 700);
       } catch (e) {
         estado.className = 'err'; estado.textContent = 'Error al guardar: ' + e.message;
-        $('btn-guardar').disabled = false;
+        bloquear(false);
       }
     }
+
+    function bloquear(si) { ['btn-guardar', 'btn-rapido', 'btn-lote'].forEach(id => $(id).disabled = si); }
+
+    /* Sube una carta (foto grande + miniatura + datos) */
+    async function subirCarta(file, giro, datos) {
+      const [img, thumb] = await Promise.all([
+        imagenABase64(file, 1400, 0.85, giro),   // un poco más grande para poder leer el número
+        imagenABase64(file, 320, 0.72, giro),
+      ]);
+      const id = db.ref(REF_META).push().key;
+      await db.ref().update({
+        [`${REF_IMG}/${id}`]: img,
+        [`${REF_META}/${id}`]: { ...datos, thumb, ts: firebase.database.ServerValue.TIMESTAMP },
+      });
+      return id;
+    }
+    const datosPendiente = () => ({
+      nombre: '', pendiente: true, tipo: '', ps: 0, etapa: '', rareza: '', estrellas: 3,
+      set: '', numero: '', cantidad: 1, notas: '', precio: 0,
+    });
+
+    /* ⚡ Guardar la foto actual sin datos */
+    async function guardarRapido() {
+      if (!actual) return;
+      bloquear(true);
+      const estado = $('estado'); estado.className = ''; estado.textContent = 'Subiendo…';
+      try {
+        const d = datosPendiente();
+        const n = $('f-nombre').value.trim(); if (n) d.nombre = n;
+        const c = Number($('f-cantidad').value) || 1; d.cantidad = c;
+        if ($('f-notas').value.trim()) d.notas = $('f-notas').value.trim();
+        await subirCarta(actual, rot, d);
+        toast('⚡ Guardada como pendiente');
+        siguiente();
+      } catch (e) { estado.className = 'err'; estado.textContent = 'Error: ' + e.message; bloquear(false); }
+    }
+    async function subirRestoRapido() {
+      const files = [actual, ...cola]; const giros = [rot];
+      cola = []; actual = null;
+      $('paso-datos').classList.remove('ver'); $('paso-foto').style.display = '';
+      await subirLote(files, giros);
+    }
+
+    /* ⚡ Subida rápida de muchas fotos */
+    async function subirLote(files, giros = []) {
+      files = Array.from(files).filter(f => f && f.type.startsWith('image/'));
+      if (!files.length) return;
+      const barra = $('barra-lote'), est = $('estado-lote');
+      barra.style.display = 'block';
+      let ok = 0, err = 0;
+      for (let i = 0; i < files.length; i++) {
+        est.textContent = `Subiendo ${i + 1} de ${files.length}…`;
+        barra.firstElementChild.style.width = (i / files.length * 100) + '%';
+        try { await subirCarta(files[i], giros[i] || 0, datosPendiente()); ok++; }
+        catch (e) { err++; console.error(e); }
+      }
+      barra.firstElementChild.style.width = '100%';
+      est.textContent = `✅ ${ok} foto${ok === 1 ? '' : 's'} subida${ok === 1 ? '' : 's'} como pendiente${ok === 1 ? '' : 's'}` + (err ? ` · ❌ ${err} con error` : '') + '. Avisa a Claude para que las rellene.';
+      setTimeout(() => { barra.style.display = 'none'; }, 1500);
+    }
+    $('in-rapida').addEventListener('change', e => { const f = Array.from(e.target.files); e.target.value = ''; subirLote(f); });
+    $('in-rapida-cam').addEventListener('change', e => { const f = Array.from(e.target.files); e.target.value = ''; subirLote(f); });
 
     let toastT;
     function toast(msg) {
