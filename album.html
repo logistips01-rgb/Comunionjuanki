@@ -254,13 +254,13 @@
     }
 
     /* ── Datos en tiempo real ── */
-    db.ref(REF_META).on('value', snap => {
+    conPin(() => db.ref(REF_META).on('value', snap => {
       cartas = {};
       snap.forEach(s => { cartas[s.key] = s.val(); });
       cargado = true;
       pintar();
       if (location.hash === '#pase' && !$('pase').classList.contains('ver')) abrirPase(true);
-    });
+    }));
 
     /* ── Ordenar ── */
     const num = s => { const m = String(s || '').match(/\d+/); return m ? +m[0] : 99999; };

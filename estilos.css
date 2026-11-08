@@ -101,3 +101,36 @@ button, input, select, textarea { font: inherit; color: inherit; }
   font-weight: 700; font-size: .9rem; transition: opacity .25s, transform .25s; white-space: nowrap;
 }
 #toast.ver { opacity: 1; transform: translate(-50%, 0); }
+
+/* ── Pantalla del PIN ── */
+#pin-capa {
+  position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1rem;
+  background: linear-gradient(170deg, var(--rojo) 0 48%, var(--tinta) 48% 51%, var(--suave) 51%);
+}
+.pin-caja {
+  background: #fff; border: 3px solid var(--tinta); border-radius: 24px; padding: 1.5rem 1.25rem 1.1rem;
+  width: 100%; max-width: 340px; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.25);
+}
+.pin-bola {
+  width: 54px; height: 54px; margin: -2.9rem auto .6rem; border-radius: 50%;
+  background: linear-gradient(to bottom, var(--rojo) 0 45%, var(--tinta) 45% 55%, #fff 55%);
+  border: 3px solid var(--tinta); position: relative;
+}
+.pin-bola::after { content: ''; position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; transform: translate(-50%,-50%); background: #fff; border: 3px solid var(--tinta); border-radius: 50%; }
+.pin-caja h2 { font-size: 1.45rem; }
+.pin-caja > p { color: var(--gris); font-size: .9rem; margin-top: .2rem; }
+.pin-puntos { display: flex; justify-content: center; gap: .65rem; margin: 1.2rem 0 .4rem; }
+.pin-puntos i { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid var(--tinta); transition: background .15s, transform .15s; }
+.pin-puntos i.on { background: var(--rojo); border-color: var(--rojo); transform: scale(1.1); }
+.pin-puntos.vibra { animation: vibra .4s; }
+@keyframes vibra { 20%,60% { transform: translateX(-8px) } 40%,80% { transform: translateX(8px) } }
+.pin-caja .pin-err { color: var(--rojo); font-weight: 800; min-height: 1.3em; font-size: .85rem; }
+.pin-teclado { display: grid; grid-template-columns: repeat(3, 1fr); gap: .55rem; margin-top: .4rem; }
+.pin-teclado button {
+  height: 58px; border-radius: 14px; border: 2px solid var(--borde); background: var(--suave);
+  font-family: 'Fredoka', sans-serif; font-size: 1.5rem; font-weight: 600; cursor: pointer; transition: background .1s, transform .1s;
+}
+.pin-teclado button:active { background: var(--amar); transform: scale(.95); }
+.pin-teclado .pin-mini { font-size: .85rem; font-family: 'Nunito', sans-serif; font-weight: 800; color: var(--gris); background: #fff; }
+.pin-recordar { display: flex; align-items: center; justify-content: center; gap: .4rem; margin-top: .9rem; font-size: .82rem; color: var(--gris); font-weight: 700; cursor: pointer; }
+.btn-salir { background: none; border: none; color: #fff; font-weight: 700; font-size: .9rem; cursor: pointer; opacity: .9; }

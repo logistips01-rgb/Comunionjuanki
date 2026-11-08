@@ -205,10 +205,10 @@
     ponerEstrellas(3);
 
     /* ── Contador total ── */
-    db.ref(REF_META).on('value', s => {
+    conPin(() => db.ref(REF_META).on('value', s => {
       const n = s.numChildren();
       $('contador').textContent = n ? `Ya hay ${n} carta${n === 1 ? '' : 's'} en el álbum` : 'El álbum está vacío. ¡Empieza con tu primera carta!';
-    });
+    }));
 
     /* ── Selección de fotos ── */
     function recibir(files) {

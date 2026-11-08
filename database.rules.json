@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "albumes": {
+      "$clave": {
+        ".read": "$clave.length === 64",
+        ".write": "$clave.length === 64"
+      }
+    },
+    "fotos":       { ".read": true, ".write": false },
+    "comentarios": { ".read": true, ".write": false }
+  }
+}

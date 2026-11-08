@@ -75,13 +75,14 @@
       <div class="stat"><b id="s-tipos">–</b><span>Tipos</span></div>
       <div class="stat"><b id="s-top">–</b><span>Raras+</span></div>
     </div>
+    <button class="btn btn-claro" onclick="cerrarSesion()" style="justify-self:center;font-size:.85rem">🔒 Cerrar sesión (pedir PIN otra vez)</button>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script src="comun.js"></script>
   <script>
-    db.ref(REF_META).on('value', snap => {
+    conPin(() => db.ref(REF_META).on('value', snap => {
       let n = 0, raras = 0; const tipos = new Set();
       snap.forEach(s => {
         const c = s.val(); const cant = Number(c.cantidad) || 1;
@@ -92,7 +93,7 @@
       document.getElementById('s-cartas').textContent = n;
       document.getElementById('s-tipos').textContent = tipos.size;
       document.getElementById('s-top').textContent = raras;
-    });
+    }));
   </script>
 </body>
 </html>
