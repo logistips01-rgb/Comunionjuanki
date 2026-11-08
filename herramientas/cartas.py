@@ -115,12 +115,22 @@ def ficha(c):
         "etapa": map_etapa(c),
         "rareza": rar,
         "set": (c.get("set") or {}).get("name") or "",
-        "numero": f"{c.get('localId')}/{total}" if c.get("localId") else "",
+        "numero": numero_impreso(c.get("localId"), total),
         "precio": precio(c),
         "tcgdex": c.get("id"),
         "rarezaOriginal": c.get("rarity") or "",
         "ilustrador": c.get("illustrator") or "",
     }
+
+
+def numero_impreso(local, total):
+    """Como viene impreso en la carta: 082/264 (rellena con ceros hasta los dígitos del total)."""
+    if not local:
+        return ""
+    local = str(local)
+    if local.isdigit() and str(total).isdigit():
+        local = local.zfill(max(3, len(str(total))))
+    return f"{local}/{total}"
 
 
 def num(s):
