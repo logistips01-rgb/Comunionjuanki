@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mi álbum · Álbum Pokémon</title>
+  <meta name="theme-color" content="#e3350d" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilos.css" />
+  <style>
+    /* ── Barra de herramientas ── */
+    .herr { position: sticky; top: var(--nav-h, 56px); z-index: 90; background: var(--suave); border-bottom: 1px solid var(--borde); }
+    .herr-in { max-width: 1100px; margin: 0 auto; padding: .75rem 1rem; display: flex; flex-direction: column; gap: .6rem; }
+    .herr-fila { display: flex; gap: .5rem; align-items: center; }
+    .herr input[type=search], .herr select {
+      padding: .6rem .75rem; border: 2px solid var(--borde); border-radius: 10px; background: #fff; font-size: .95rem; outline: none; min-width: 0;
+    }
+    .herr input[type=search] { flex: 1; }
+    .herr select { flex: 1; font-weight: 700; }
+    #btn-dir { flex-shrink: 0; padding: .6rem .8rem; font-size: .85rem; }
+    .chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .info-fila { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+    #resumen { font-size: .85rem; color: var(--gris); font-weight: 700; }
+    #btn-pase { padding: .5rem .9rem; font-size: .85rem; }
+
+    /* ── Rejilla ── */
+    #rejilla { max-width: 1100px; margin: 0 auto; padding: 1rem 1rem 5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .9rem; }
+    @media (max-width: 400px) { #rejilla { grid-template-columns: 1fr 1fr; gap: .65rem; padding: .75rem .75rem 5rem; } }
+    .grupo { grid-column: 1 / -1; display: flex; align-items: center; gap: .5rem; margin-top: .5rem; font-family: 'Fredoka', sans-serif; font-size: 1.15rem; }
+    .grupo small { font-family: 'Nunito', sans-serif; font-size: .8rem; color: var(--gris); font-weight: 700; }
+    .grupo::after { content: ''; flex: 1; height: 2px; background: var(--borde); border-radius: 1px; }
+
+    .carta {
+      background: #fff; border-radius: 14px; overflow: hidden; cursor: pointer; position: relative;
+      box-shadow: 0 2px 8px var(--sombra); border: 3px solid var(--tc, #ccc); transition: transform .15s;
+      display: flex; flex-direction: column; text-align: left; padding: 0;
+    }
+    .carta:active { transform: scale(.97); }
+    @media (hover: hover) { .carta:hover { transform: translateY(-3px); } }
+    .carta img { width: 100%; aspect-ratio: 63/88; object-fit: cover; display: block; background: #eef0f5; }
+    .carta .cuerpo { padding: .45rem .55rem .55rem; display: flex; flex-direction: column; gap: .25rem; }
+    .carta .nom { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 1rem; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .carta .lin { display: flex; justify-content: space-between; align-items: center; gap: .3rem; font-size: .75rem; font-weight: 800; color: var(--gris); }
+    .carta .ps { color: var(--rojo); }
+    .carta .estrellas { font-size: .85rem; }
+    .carta .cant { position: absolute; top: 6px; right: 6px; background: var(--tinta); color: #fff; font-weight: 800; font-size: .75rem; border-radius: 99px; padding: .1rem .45rem; }
+    .carta .pos { position: absolute; top: 6px; left: 6px; background: var(--amar); color: var(--tinta); font-weight: 800; font-size: .72rem; border-radius: 99px; padding: .1rem .45rem; }
+
+    #vacio { grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--gris); }
+    #vacio .ico { font-size: 3rem; }
+    #vacio p { margin: .5rem 0 1rem; }
+
+    /* ── Modal detalle ── */
+    .capa { display: none; position: fixed; inset: 0; z-index: 300; background: rgba(15,18,25,.75); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 1rem; }
+    .capa.ver { display: flex; }
+    .modal { background: #fff; border-radius: 20px; width: 100%; max-width: 760px; max-height: 94dvh; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 640px) { .modal { grid-template-columns: 1fr; } }
+    .modal-img { background: var(--tinta); display: flex; align-items: center; justify-content: center; padding: 1rem; min-height: 260px; position: relative; }
+    .modal-img img { max-width: 100%; max-height: 70dvh; border-radius: 10px; }
+    @media (max-width: 640px) { .modal-img img { max-height: 48dvh; } }
+    .modal-img .cerrar { position: absolute; top: .6rem; right: .6rem; width: 38px; height: 38px; border-radius: 50%; border: none; background: rgba(255,255,255,.9); font-size: 1.1rem; cursor: pointer; }
+    .modal-img .flecha { position: absolute; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%; border: none; background: rgba(255,255,255,.85); font-size: 1.2rem; cursor: pointer; }
+    .modal-img .flecha.izq { left: .5rem; } .modal-img .flecha.der { right: .5rem; }
+    .modal-datos { padding: 1.25rem; display: flex; flex-direction: column; gap: .9rem; }
+    .modal-datos h2 { font-size: 1.7rem; line-height: 1.1; }
+    .ficha { display: grid; grid-template-columns: auto 1fr; gap: .45rem .9rem; font-size: .92rem; }
+    .ficha dt { color: var(--gris); font-weight: 800; font-size: .78rem; text-transform: uppercase; align-self: center; }
+    .ficha dd { font-weight: 700; }
+    .modal-btns { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: auto; }
+    .modal-btns .btn { flex: 1; }
+    #form-editar { display: none; flex-direction: column; gap: .7rem; }
+    #form-editar.ver { display: flex; }
+    #form-editar .chips { flex-wrap: wrap; }
+
+    /* ── Pase de diapositivas ── */
+    #pase { display: none; position: fixed; inset: 0; z-index: 600; background: radial-gradient(circle at 50% 40%, #2a3350, #0b0e16 70%); color: #fff; user-select: none; }
+    #pase.ver { display: block; }
+    .diapo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 70px 20px 120px; opacity: 0; transition: opacity 1.1s ease-in-out; }
+    .diapo.activa { opacity: 1; }
+    .diapo img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+    .diapo.activa img { animation: entra 1.1s ease-out; }
+    @keyframes entra { from { transform: scale(.94) } to { transform: scale(1) } }
+    #pase-top { position: absolute; top: 0; left: 0; right: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: linear-gradient(to bottom, rgba(0,0,0,.6), transparent); }
+    #pase-top .titulo { font-size: clamp(1rem, 2.5vw, 1.5rem); color: var(--amar); display: flex; align-items: center; gap: .5rem; }
+    .pase-ctrl { display: flex; gap: .4rem; flex-shrink: 0; }
+    @media (max-width: 520px) { #pase-top .titulo span:not(.pokeball) { display: none; } }
+    .pase-ctrl button { white-space: nowrap; background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 10px; padding: .45rem .7rem; cursor: pointer; font-size: .9rem; backdrop-filter: blur(6px); }
+    #pase-pie { position: absolute; left: 0; right: 0; bottom: 0; z-index: 10; padding: 18px 22px 20px; background: linear-gradient(to top, rgba(0,0,0,.85), transparent); display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; }
+    #pase-nom { font-family: 'Fredoka', sans-serif; font-size: clamp(1.4rem, 4vw, 2.6rem); line-height: 1.05; }
+    #pase-det { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-top: .4rem; font-weight: 800; font-size: clamp(.8rem, 1.8vw, 1rem); }
+    #pase-det .estrellas { font-size: 1.15em; }
+    #pase-cnt { color: rgba(255,255,255,.7); font-weight: 700; white-space: nowrap; }
+    .pase-zona { position: absolute; top: 60px; bottom: 100px; width: 30%; z-index: 5; cursor: pointer; }
+    .pase-zona.izq { left: 0; } .pase-zona.der { right: 0; }
+    #pase-inicio { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.6); }
+    #pase-inicio.ver { display: flex; }
+    #pase-barra { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--amar); z-index: 11; width: 0; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="index.html">← Inicio</a>
+    <span class="nav-tit"><span class="pokeball"></span> Mi álbum</span>
+    <a href="subir.html">+ Añadir</a>
+  </nav>
+
+  <div class="herr">
+    <div class="herr-in">
+      <div class="herr-fila">
+        <input type="search" id="buscar" placeholder="🔍 Buscar por nombre, colección…" />
+      </div>
+      <div class="herr-fila">
+        <select id="orden">
+          <option value="puntuacion">🏆 Peor / mejor (puntuación)</option>
+          <option value="estrellas">⭐ Favoritas (estrellas)</option>
+          <option value="rareza">💎 Rareza</option>
+          <option value="precio">💶 Valor (€)</option>
+          <option value="ps">❤️ PS (vida)</option>
+          <option value="etapa">📈 Nivel / etapa</option>
+          <option value="tipo">🔥 Tipo</option>
+          <option value="nombre">🔤 Nombre</option>
+          <option value="set">📦 Colección y número</option>
+          <option value="fecha">🕒 Fecha añadida</option>
+        </select>
+        <button class="btn btn-claro" id="btn-dir"></button>
+      </div>
+      <div class="chips" id="filtro-tipo"></div>
+      <div class="info-fila">
+        <span id="resumen">Cargando…</span>
+        <button class="btn btn-amar" id="btn-pase">▶ Pase de diapositivas</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="rejilla"></div>
+
+  <!-- Detalle -->
+  <div class="capa" id="capa-det">
+    <div class="modal">
+      <div class="modal-img">
+        <img id="det-img" alt="" />
+        <button class="flecha izq" onclick="moverDet(-1)">‹</button>
+        <button class="flecha der" onclick="moverDet(1)">›</button>
+        <button class="cerrar" onclick="cerrarDet()">✕</button>
+      </div>
+      <div class="modal-datos">
+        <div id="det-vista">
+          <h2 id="det-nom"></h2>
+          <div id="det-tipo" style="margin:.5rem 0 1rem"></div>
+          <dl class="ficha" id="det-ficha"></dl>
+        </div>
+        <div id="form-editar">
+          <div class="campo"><label>Nombre</label><input id="e-nombre" maxlength="60" /></div>
+          <div class="campo"><label>Tipo</label><div class="chips" id="e-tipos"></div></div>
+          <div class="fila">
+            <div class="campo"><label>PS</label><input id="e-ps" type="number" inputmode="numeric" min="0" max="500" step="10" /></div>
+            <div class="campo"><label>Nivel / etapa</label><select id="e-etapa"></select></div>
+          </div>
+          <div class="campo"><label>Rareza</label><select id="e-rareza"></select></div>
+          <div class="campo"><label>Estrellas</label><div class="sel-estrellas" id="e-estrellas"></div></div>
+          <div class="fila">
+            <div class="campo"><label>Colección</label><input id="e-set" maxlength="60" /></div>
+            <div class="campo"><label>Número</label><input id="e-numero" maxlength="12" /></div>
+          </div>
+          <div class="fila">
+            <div class="campo"><label>Cuántas tengo</label><input id="e-cantidad" type="number" min="1" max="99" /></div>
+            <div class="campo"><label>Valor (€)</label><input id="e-precio" type="number" inputmode="decimal" min="0" step="0.01" /></div>
+          </div>
+          <div class="campo"><label>Notas</label><input id="e-notas" maxlength="120" /></div>
+        </div>
+        <div class="modal-btns" id="btns-vista">
+          <button class="btn btn-azul" onclick="editar()">✏️ Editar</button>
+          <button class="btn btn-peligro" onclick="borrar()">🗑️ Borrar</button>
+        </div>
+        <div class="modal-btns" id="btns-editar" style="display:none">
+          <button class="btn btn-rojo" onclick="guardarEdicion()">💾 Guardar</button>
+          <button class="btn btn-claro" onclick="cancelarEdicion()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pase de diapositivas -->
+  <div id="pase">
+    <div id="pase-diapos"></div>
+    <div class="pase-zona izq" onclick="paseMover(-1)"></div>
+    <div class="pase-zona der" onclick="paseMover(1)"></div>
+    <div id="pase-top">
+      <span class="titulo"><span class="pokeball"></span> <span>El álbum Pokémon de Juanki</span></span>
+      <div class="pase-ctrl">
+        <button onclick="pasePausa()" id="pase-pausa">⏸</button>
+        <button onclick="paseVelocidad()" id="pase-vel">6 s</button>
+        <button onclick="paseMute()" id="pase-mute">🔊</button>
+        <button onclick="cerrarPase()">✕ Salir</button>
+      </div>
+    </div>
+    <div id="pase-pie">
+      <div>
+        <div id="pase-nom"></div>
+        <div id="pase-det"></div>
+      </div>
+      <span id="pase-cnt"></span>
+    </div>
+    <div id="pase-barra"></div>
+    <div id="pase-inicio"><button class="btn btn-amar" style="font-size:1.3rem;padding:1rem 2rem" onclick="empezarPase()">▶ Empezar el pase</button></div>
+    <audio id="pase-audio" src="musica1.mp3" loop preload="none"></audio>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="comun.js"></script>
+  <script>
+    const $ = id => document.getElementById(id);
+    let cartas = {};          // id → datos
+    let lista = [];           // ids visibles, en orden
+    let cargado = false;
+    const imgCache = {};      // id → base64 grande
+    const fijarNav = () => document.documentElement.style.setProperty('--nav-h', document.querySelector('.nav').offsetHeight + 'px');
+    fijarNav(); addEventListener('resize', fijarNav);
+
+    /* ── Estado de filtros (se recuerda en el navegador) ── */
+    const LS = 'album_pokemon_vista';
+    let vista = { orden: 'puntuacion', desc: true, tipo: '', q: '' };
+    try { Object.assign(vista, JSON.parse(localStorage.getItem(LS) || '{}')); } catch {}
+    function guardarVista() { try { localStorage.setItem(LS, JSON.stringify(vista)); } catch {} }
+
+    $('orden').value = vista.orden;
+    $('buscar').value = vista.q;
+
+    $('filtro-tipo').innerHTML = `<button class="chip" data-tipo="">Todos</button>` +
+      TIPOS.map(t => `<button class="chip" style="--tc:${t.color}" data-tipo="${t.id}">${t.ico} ${t.id}</button>`).join('');
+    $('filtro-tipo').addEventListener('click', e => {
+      const b = e.target.closest('.chip'); if (!b) return;
+      vista.tipo = b.dataset.tipo; guardarVista(); pintar();
+    });
+    $('orden').addEventListener('change', () => {
+      vista.orden = $('orden').value;
+      vista.desc = !['nombre', 'set'].includes(vista.orden);
+      guardarVista(); pintar();
+    });
+    $('btn-dir').addEventListener('click', () => { vista.desc = !vista.desc; guardarVista(); pintar(); });
+    $('buscar').addEventListener('input', () => { vista.q = $('buscar').value; guardarVista(); pintar(); });
+
+    function etiquetaDir() {
+      const o = vista.orden, d = vista.desc;
+      if (o === 'nombre') return d ? 'Z → A' : 'A → Z';
+      if (o === 'set')    return d ? '⬇ Mayor nº' : '⬆ Menor nº';
+      if (o === 'fecha')  return d ? '🆕 Nuevas' : '📜 Antiguas';
+      return d ? '⬇ Mejor primero' : '⬆ Peor primero';
+    }
+
+    /* ── Datos en tiempo real ── */
+    db.ref(REF_META).on('value', snap => {
+      cartas = {};
+      snap.forEach(s => { cartas[s.key] = s.val(); });
+      cargado = true;
+      pintar();
+      if (location.hash === '#pase' && !$('pase').classList.contains('ver')) abrirPase(true);
+    });
+
+    /* ── Ordenar ── */
+    const num = s => { const m = String(s || '').match(/\d+/); return m ? +m[0] : 99999; };
+    const cmpTexto = (a, b) => String(a || '').localeCompare(String(b || ''), 'es', { sensitivity: 'base' });
+    function comparar(a, b) {
+      const A = cartas[a], B = cartas[b];
+      let r = 0;
+      switch (vista.orden) {
+        case 'estrellas': r = (A.estrellas || 0) - (B.estrellas || 0); break;
+        case 'rareza':    r = RAREZAS.indexOf(A.rareza) - RAREZAS.indexOf(B.rareza); break;
+        case 'ps':        r = (A.ps || 0) - (B.ps || 0); break;
+        case 'precio':    r = (A.precio || 0) - (B.precio || 0); break;
+        case 'etapa':     r = ETAPAS.indexOf(A.etapa) - ETAPAS.indexOf(B.etapa); break;
+        case 'nombre':    r = cmpTexto(A.nombre, B.nombre); break;
+        case 'set':       r = cmpTexto(A.set, B.set) || (num(A.numero) - num(B.numero)); break;
+        case 'fecha':     r = (A.ts || 0) - (B.ts || 0); break;
+        case 'tipo': {
+          // Los tipos siempre en orden fijo; dentro de cada tipo, por puntuación
+          const t = TIPOS.findIndex(x => x.id === A.tipo) - TIPOS.findIndex(x => x.id === B.tipo);
+          if (t) return t;
+          r = puntuacion(A) - puntuacion(B); break;
+        }
+      }
+      if (!r) r = puntuacion(A) - puntuacion(B);
+      if (!r) return cmpTexto(A.nombre, B.nombre);
+      return vista.desc ? -r : r;
+    }
+
+    function grupoDe(c) {
+      switch (vista.orden) {
+        case 'tipo':      { const t = TIPO[c.tipo]; return t ? `${t.ico} ${t.id}` : 'Sin tipo'; }
+        case 'rareza':    return `${RAREZA_ICO[RAREZAS.indexOf(c.rareza)] || ''} ${c.rareza || 'Sin rareza'}`;
+        case 'etapa':     return c.etapa || 'Sin etapa';
+        case 'estrellas': return `<span class="estrellas">${estrellasTxt(c.estrellas)}</span>`;
+        case 'set':       return c.set || 'Sin colección';
+        default: return null;
+      }
+    }
+
+    /* ── Pintar rejilla ── */
+    function pintar() {
+      document.querySelectorAll('#filtro-tipo .chip').forEach(c => c.classList.toggle('on', c.dataset.tipo === vista.tipo));
+      $('btn-dir').textContent = etiquetaDir();
+
+      const q = vista.q.trim().toLowerCase();
+      lista = Object.keys(cartas).filter(id => {
+        const c = cartas[id];
+        if (vista.tipo && c.tipo !== vista.tipo) return false;
+        if (q && !`${c.nombre} ${c.set} ${c.numero} ${c.notas} ${c.rareza} ${c.tipo}`.toLowerCase().includes(q)) return false;
+        return true;
+      }).sort(comparar);
+
+      const total = Object.values(cartas).reduce((s, c) => s + (Number(c.cantidad) || 1), 0);
+      const nDist = Object.keys(cartas).length;
+      const valor = Object.values(cartas).reduce((s, c) => s + (Number(c.precio) || 0) * (Number(c.cantidad) || 1), 0);
+      $('resumen').textContent = !cargado ? 'Cargando…'
+        : lista.length === nDist ? `${nDist} cartas distintas · ${total} en total${valor ? ' · ≈ ' + euros(valor) : ''}`
+        : `${lista.length} de ${nDist} cartas`;
+
+      const rej = $('rejilla');
+      if (!lista.length) {
+        rej.innerHTML = cargado ? `<div id="vacio"><div class="ico">${nDist ? '🔎' : '📭'}</div>
+          <p>${nDist ? 'Ninguna carta coincide con el filtro.' : 'Todavía no hay cartas en el álbum.'}</p>
+          ${nDist ? '' : '<a class="btn btn-rojo" href="subir.html">📷 Añadir la primera</a>'}</div>` : '';
+        return;
+      }
+
+      let html = '', grupoAnt = null;
+      const conteoGrupo = {};
+      lista.forEach(id => { const g = grupoDe(cartas[id]); if (g) conteoGrupo[g] = (conteoGrupo[g] || 0) + 1; });
+      lista.forEach((id, i) => {
+        const c = cartas[id];
+        const g = grupoDe(c);
+        if (g && g !== grupoAnt) { html += `<div class="grupo">${g} <small>(${conteoGrupo[g]})</small></div>`; grupoAnt = g; }
+        const t = TIPO[c.tipo] || { color: '#bbb' };
+        html += `
+          <button class="carta" style="--tc:${t.color}" data-id="${id}">
+            <img src="${esc(c.thumb)}" alt="${esc(c.nombre)}" loading="lazy" />
+            ${['puntuacion', 'ps', 'rareza', 'estrellas', 'precio'].includes(vista.orden) ? `<span class="pos">#${i + 1}</span>` : ''}
+            ${(c.cantidad || 1) > 1 ? `<span class="cant">×${c.cantidad}</span>` : ''}
+            <div class="cuerpo">
+              <span class="nom">${esc(c.nombre)}</span>
+              <div class="lin">${tipoBadge(c.tipo)}${c.ps ? `<span class="ps">${c.ps} PS</span>` : ''}</div>
+              <div class="lin"><span class="estrellas">${estrellasTxt(c.estrellas)}</span><span title="${esc(c.rareza)}">${RAREZA_ICO[RAREZAS.indexOf(c.rareza)] || ''}</span></div>
+            </div>
+          </button>`;
+      });
+      rej.innerHTML = html;
+    }
+    $('rejilla').addEventListener('click', e => {
+      const b = e.target.closest('.carta'); if (b) abrirDet(b.dataset.id);
+    });
+
+    /* ── Imagen grande (bajo demanda) ── */
+    async function imagenGrande(id) {
+      if (imgCache[id]) return imgCache[id];
+      const s = await db.ref(`${REF_IMG}/${id}`).get();
+      return imgCache[id] = s.val() || cartas[id]?.thumb || '';
+    }
+
+    /* ── Detalle ── */
+    let detId = null;
+    async function abrirDet(id) {
+      detId = id; cancelarEdicion();
+      const c = cartas[id];
+      $('det-img').src = c.thumb;
+      $('det-nom').textContent = c.nombre;
+      $('det-tipo').innerHTML = tipoBadge(c.tipo);
+      const fecha = c.ts ? new Date(c.ts).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+      const pos = lista.indexOf(id);
+      $('det-ficha').innerHTML = `
+        <dt>Estrellas</dt><dd class="estrellas">${estrellasTxt(c.estrellas)}</dd>
+        <dt>PS</dt><dd>${c.ps || '—'}</dd>
+        <dt>Nivel</dt><dd>${esc(c.etapa || '—')}</dd>
+        <dt>Rareza</dt><dd>${RAREZA_ICO[RAREZAS.indexOf(c.rareza)] || ''} ${esc(c.rareza || '—')}</dd>
+        <dt>Colección</dt><dd>${esc(c.set || '—')}</dd>
+        <dt>Número</dt><dd>${esc(c.numero || '—')}</dd>
+        <dt>Tengo</dt><dd>${c.cantidad || 1}</dd>
+        ${c.precio ? `<dt>Valor</dt><dd>${euros(c.precio)}</dd>` : ''}
+        ${c.notas ? `<dt>Notas</dt><dd>${esc(c.notas)}</dd>` : ''}
+        <dt>Puesto</dt><dd>${pos + 1} de ${lista.length}</dd>
+        ${fecha ? `<dt>Añadida</dt><dd>${fecha}</dd>` : ''}`;
+      $('capa-det').classList.add('ver');
+      document.body.style.overflow = 'hidden';
+      const src = await imagenGrande(id);
+      if (detId === id) $('det-img').src = src;
+    }
+    function cerrarDet() { $('capa-det').classList.remove('ver'); document.body.style.overflow = ''; detId = null; }
+    $('capa-det').addEventListener('click', e => { if (e.target.id === 'capa-det') cerrarDet(); });
+    function moverDet(d) {
+      if (!lista.length) return;
+      const i = (lista.indexOf(detId) + d + lista.length) % lista.length;
+      abrirDet(lista[i]);
+    }
+
+    /* ── Editar ── */
+    let eTipo = '', eEst = 3;
+    $('e-tipos').innerHTML = TIPOS.map(t => `<button type="button" class="chip" style="--tc:${t.color}" data-tipo="${t.id}">${t.ico} ${t.id}</button>`).join('');
+    $('e-tipos').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b) ponerETipo(b.dataset.tipo); });
+    function ponerETipo(t) { eTipo = t; document.querySelectorAll('#e-tipos .chip').forEach(c => c.classList.toggle('on', c.dataset.tipo === t)); }
+    $('e-etapa').innerHTML = ETAPAS.map(e => `<option>${e}</option>`).join('');
+    $('e-rareza').innerHTML = RAREZAS.map((r, i) => `<option value="${r}">${RAREZA_ICO[i]} ${r}</option>`).join('');
+    $('e-estrellas').innerHTML = [1,2,3,4,5].map(n => `<button type="button" data-n="${n}">★</button>`).join('');
+    $('e-estrellas').addEventListener('click', e => { const b = e.target.closest('button'); if (b) ponerEEst(+b.dataset.n); });
+    function ponerEEst(n) { eEst = n; document.querySelectorAll('#e-estrellas button').forEach(b => b.classList.toggle('on', +b.dataset.n <= n)); }
+
+    function editar() {
+      const c = cartas[detId];
+      $('e-nombre').value = c.nombre || '';
+      $('e-ps').value = c.ps || '';
+      $('e-etapa').value = c.etapa || ETAPAS[1];
+      $('e-rareza').value = c.rareza || RAREZAS[0];
+      $('e-set').value = c.set || '';
+      $('e-numero').value = c.numero || '';
+      $('e-cantidad').value = c.cantidad || 1;
+      $('e-notas').value = c.notas || '';
+      $('e-precio').value = c.precio || '';
+      ponerETipo(c.tipo || ''); ponerEEst(c.estrellas || 3);
+      $('det-vista').style.display = 'none'; $('btns-vista').style.display = 'none';
+      $('form-editar').classList.add('ver'); $('btns-editar').style.display = '';
+    }
+    function cancelarEdicion() {
+      $('det-vista').style.display = ''; $('btns-vista').style.display = '';
+      $('form-editar').classList.remove('ver'); $('btns-editar').style.display = 'none';
+    }
+    async function guardarEdicion() {
+      const nombre = $('e-nombre').value.trim();
+      if (!nombre) { $('e-nombre').focus(); return; }
+      const id = detId;
+      try {
+        await db.ref(`${REF_META}/${id}`).update({
+          nombre, tipo: eTipo || 'Incoloro',
+          ps: Number($('e-ps').value) || 0,
+          etapa: $('e-etapa').value, rareza: $('e-rareza').value, estrellas: eEst,
+          set: $('e-set').value.trim(), numero: $('e-numero').value.trim(),
+          cantidad: Math.max(1, Number($('e-cantidad').value) || 1),
+          notas: $('e-notas').value.trim(),
+          precio: Number($('e-precio').value) || 0,
+        });
+        toast('✅ Carta actualizada');
+        abrirDet(id);
+      } catch (e) { alert('Error al guardar: ' + e.message); }
+    }
+    async function borrar() {
+      const c = cartas[detId];
+      if (!confirm(`¿Seguro que quieres borrar "${c.nombre}" del álbum?`)) return;
+      const id = detId;
+      try {
+        await db.ref().update({ [`${REF_META}/${id}`]: null, [`${REF_IMG}/${id}`]: null });
+        cerrarDet(); toast('🗑️ Carta borrada');
+      } catch (e) { alert('Error al borrar: ' + e.message); }
+    }
+
+    /* ── Pase de diapositivas ── */
+    const VELOCIDADES = [4, 6, 9, 12];
+    let pase = { ids: [], idx: 0, timer: null, pausa: false, vel: 6, muted: false, t0: 0 };
+    const audio = $('pase-audio');
+    $('btn-pase').addEventListener('click', () => abrirPase(false));
+
+    function abrirPase(desdeEnlace) {
+      if (!lista.length) { toast('No hay cartas que mostrar'); return; }
+      pase.ids = lista.slice();
+      pase.idx = 0;
+      $('pase-diapos').innerHTML = '';
+      $('pase').classList.add('ver');
+      document.body.style.overflow = 'hidden';
+      if (desdeEnlace) { $('pase-inicio').classList.add('ver'); mostrarDiapo(0, true); }
+      else empezarPase();
+    }
+    function empezarPase() {
+      $('pase-inicio').classList.remove('ver');
+      document.documentElement.requestFullscreen?.().catch(() => {});
+      audio.currentTime = 0; audio.muted = pase.muted; audio.play().catch(() => {});
+      pase.pausa = false; $('pase-pausa').textContent = '⏸';
+      mostrarDiapo(pase.idx);
+    }
+    function cerrarPase() {
+      $('pase').classList.remove('ver'); document.body.style.overflow = '';
+      clearTimeout(pase.timer); cancelAnimationFrame(pase.raf);
+      audio.pause();
+      if (document.fullscreenElement) document.exitFullscreen?.();
+      if (location.hash === '#pase') history.replaceState(null, '', location.pathname);
+    }
+
+    async function mostrarDiapo(i, sinTimer) {
+      const n = pase.ids.length;
+      pase.idx = ((i % n) + n) % n;
+      const id = pase.ids[pase.idx];
+      const c = cartas[id] || {};
+      const cont = $('pase-diapos');
+
+      const d = document.createElement('div'); d.className = 'diapo';
+      const img = document.createElement('img'); img.alt = c.nombre || '';
+      img.src = imgCache[id] || c.thumb || '';
+      d.appendChild(img); cont.appendChild(d);
+      requestAnimationFrame(() => requestAnimationFrame(() => d.classList.add('activa')));
+      // Deja solo la anterior para el fundido
+      while (cont.children.length > 2) cont.firstElementChild.remove();
+      if (cont.children.length === 2) cont.firstElementChild.classList.remove('activa');
+
+      $('pase-nom').textContent = c.nombre || '';
+      $('pase-det').innerHTML = `${tipoBadge(c.tipo)}${c.ps ? `<span>❤️ ${c.ps} PS</span>` : ''}<span>${esc(c.etapa || '')}</span>`
+        + `<span>${RAREZA_ICO[RAREZAS.indexOf(c.rareza)] || ''} ${esc(c.rareza || '')}</span><span class="estrellas">${estrellasTxt(c.estrellas)}</span>`;
+      $('pase-cnt').textContent = `${pase.idx + 1} / ${n}`;
+
+      clearTimeout(pase.timer); cancelAnimationFrame(pase.raf);
+      if (!sinTimer && !pase.pausa) programar();
+
+      if (!imgCache[id]) imagenGrande(id).then(src => { if (pase.ids[pase.idx] === id) img.src = src; });
+      // Precarga la siguiente
+      imagenGrande(pase.ids[(pase.idx + 1) % n]).catch(() => {});
+    }
+    function programar() {
+      pase.t0 = performance.now();
+      const dur = pase.vel * 1000;
+      pase.timer = setTimeout(() => mostrarDiapo(pase.idx + 1), dur);
+      const tick = () => {
+        const p = Math.min(1, (performance.now() - pase.t0) / dur);
+        $('pase-barra').style.width = (p * 100) + '%';
+        if (p < 1) pase.raf = requestAnimationFrame(tick);
+      };
+      tick();
+    }
+    function paseMover(d) { if ($('pase-inicio').classList.contains('ver')) return; mostrarDiapo(pase.idx + d); }
+    function pasePausa() {
+      pase.pausa = !pase.pausa;
+      $('pase-pausa').textContent = pase.pausa ? '▶' : '⏸';
+      clearTimeout(pase.timer); cancelAnimationFrame(pase.raf);
+      if (!pase.pausa) programar();
+    }
+    function paseVelocidad() {
+      pase.vel = VELOCIDADES[(VELOCIDADES.indexOf(pase.vel) + 1) % VELOCIDADES.length];
+      $('pase-vel').textContent = pase.vel + ' s';
+      if (!pase.pausa) { clearTimeout(pase.timer); cancelAnimationFrame(pase.raf); programar(); }
+    }
+    function paseMute() {
+      pase.muted = !pase.muted; audio.muted = pase.muted;
+      $('pase-mute').textContent = pase.muted ? '🔇' : '🔊';
+    }
+
+    document.addEventListener('keydown', e => {
+      if ($('pase').classList.contains('ver')) {
+        if (e.key === 'ArrowRight') paseMover(1);
+        else if (e.key === 'ArrowLeft') paseMover(-1);
+        else if (e.key === ' ') { e.preventDefault(); pasePausa(); }
+        else if (e.key === 'Escape') cerrarPase();
+      } else if ($('capa-det').classList.contains('ver') && !$('form-editar').classList.contains('ver')) {
+        if (e.key === 'ArrowRight') moverDet(1);
+        else if (e.key === 'ArrowLeft') moverDet(-1);
+        else if (e.key === 'Escape') cerrarDet();
+      }
+    });
+
+    let toastT;
+    function toast(msg) {
+      const t = $('toast'); t.textContent = msg; t.classList.add('ver');
+      clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('ver'), 2200);
+    }
+
+    pintar();
+  </script>
+</body>
+</html>
