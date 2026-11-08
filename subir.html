@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Añadir cartas · Álbum Pokémon</title>
+  <meta name="theme-color" content="#e3350d" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilos.css" />
+  <style>
+    main { max-width: 560px; margin: 0 auto; padding: 1.25rem 1rem 4rem; display: flex; flex-direction: column; gap: 1.1rem; }
+
+    /* Paso 1: elegir foto */
+    #paso-foto { display: flex; flex-direction: column; gap: .75rem; }
+    .zona-foto {
+      border: 3px dashed #c9cfdc; border-radius: 20px; background: #fff;
+      padding: 2.25rem 1rem; text-align: center; cursor: pointer;
+    }
+    .zona-foto .ico { font-size: 3.2rem; }
+    .zona-foto h2 { font-size: 1.4rem; margin-top: .4rem; }
+    .zona-foto p { color: var(--gris); font-size: .9rem; margin-top: .25rem; }
+    .consejo { background: #fff6d1; border-radius: 14px; padding: .8rem 1rem; font-size: .85rem; line-height: 1.5; }
+
+    /* Paso 2: datos */
+    #paso-datos { display: none; flex-direction: column; gap: 1rem; }
+    #paso-datos.ver { display: flex; }
+    .previa {
+      position: relative; background: var(--tinta); border-radius: 18px; padding: .75rem;
+      display: flex; justify-content: center;
+    }
+    .previa img { max-width: 100%; max-height: 52dvh; border-radius: 10px; display: block; }
+    .previa-btns { position: absolute; right: .6rem; bottom: .6rem; display: flex; gap: .4rem; }
+    .previa-btns button {
+      width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer;
+      background: rgba(255,255,255,.92); font-size: 1.15rem; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    .cola { position: absolute; left: .6rem; top: .6rem; background: var(--amar); color: var(--tinta); font-weight: 800; font-size: .78rem; border-radius: 99px; padding: .2rem .6rem; }
+
+    .tarjeta { background: #fff; border-radius: 18px; padding: 1rem; display: flex; flex-direction: column; gap: .9rem; box-shadow: 0 2px 10px var(--sombra); }
+    .tarjeta h3 { font-size: 1.05rem; }
+
+    .buscar-fila { display: flex; gap: .5rem; }
+    .buscar-fila input { flex: 1; }
+    #resultados { max-height: 55dvh; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: .5rem; }
+    #resultados:empty { display: none; }
+    .res { background: none; border: 3px solid transparent; border-radius: 8px; padding: 0; cursor: pointer; overflow: hidden; }
+    .res img { width: 100%; display: block; aspect-ratio: 63/88; object-fit: cover; background: #eee; }
+    .res small { display: block; font-size: .65rem; font-weight: 700; color: var(--gris); padding: .15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .res.sel { border-color: var(--azul); }
+    #buscar-estado { font-size: .82rem; color: var(--gris); }
+
+    .acciones { display: flex; flex-direction: column; gap: .6rem; position: sticky; bottom: 0; padding: .75rem 0; background: linear-gradient(to top, var(--suave) 70%, transparent); }
+    .barra { height: 6px; background: var(--borde); border-radius: 3px; overflow: hidden; display: none; }
+    .barra div { height: 100%; width: 0; background: var(--azul); transition: width .3s; }
+    #estado { text-align: center; font-weight: 700; font-size: .9rem; min-height: 1.2em; }
+    #estado.err { color: var(--rojo); }
+    #estado.ok { color: #1f8a3b; }
+
+    .contador { text-align: center; color: var(--gris); font-size: .85rem; font-weight: 700; }
+    input[type=file] { display: none; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="index.html">← Inicio</a>
+    <span class="nav-tit"><span class="pokeball"></span> Añadir cartas</span>
+    <a href="album.html">Álbum →</a>
+  </nav>
+
+  <main>
+    <!-- PASO 1 -->
+    <section id="paso-foto">
+      <div class="zona-foto" onclick="document.getElementById('in-camara').click()">
+        <div class="ico">📸</div>
+        <h2>Hacer foto a una carta</h2>
+        <p>Se abrirá la cámara del móvil</p>
+      </div>
+      <button class="btn btn-claro btn-bloque" onclick="document.getElementById('in-galeria').click()">🖼️ Elegir fotos de la galería (puedes elegir varias)</button>
+      <div class="consejo">💡 <b>Consejo:</b> pon la carta sobre una mesa lisa, con buena luz y sin reflejos, y que ocupe casi toda la foto.</div>
+      <p class="contador" id="contador"></p>
+    </section>
+
+    <!-- PASO 2 -->
+    <section id="paso-datos">
+      <div class="previa">
+        <span class="cola" id="cola" hidden></span>
+        <img id="previa-img" alt="Carta" />
+        <div class="previa-btns">
+          <button title="Girar" onclick="girar()">↻</button>
+          <button title="Otra foto" onclick="cancelar()">✕</button>
+        </div>
+      </div>
+
+      <div class="tarjeta">
+        <h3>🔍 Buscar la carta (opcional)</h3>
+        <div class="buscar-fila campo">
+          <input id="in-buscar" type="search" placeholder="Ej: Pikachu, Charizard…" autocomplete="off" />
+          <button class="btn btn-azul" onclick="buscarCatalogo()">Buscar</button>
+        </div>
+        <p id="buscar-estado">Escribe el nombre y toca la carta que coincida: se rellenan los datos solos.</p>
+        <div id="resultados"></div>
+      </div>
+
+      <div class="tarjeta">
+        <h3>📝 Datos de la carta</h3>
+        <div class="campo">
+          <label for="f-nombre">Nombre</label>
+          <input id="f-nombre" type="text" maxlength="60" placeholder="Pikachu" />
+        </div>
+        <div class="campo">
+          <label>Tipo</label>
+          <div class="chips" id="chips-tipo"></div>
+        </div>
+        <div class="fila">
+          <div class="campo">
+            <label for="f-ps">PS (vida)</label>
+            <input id="f-ps" type="number" inputmode="numeric" min="0" max="500" step="10" placeholder="60" />
+          </div>
+          <div class="campo">
+            <label for="f-etapa">Nivel / etapa</label>
+            <select id="f-etapa"></select>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="f-rareza">Rareza</label>
+          <select id="f-rareza"></select>
+        </div>
+        <div class="campo">
+          <label>¿Cuánto te gusta?</label>
+          <div class="sel-estrellas" id="sel-estrellas"></div>
+        </div>
+        <div class="fila">
+          <div class="campo">
+            <label for="f-set">Colección</label>
+            <input id="f-set" type="text" maxlength="60" placeholder="Escarlata y Púrpura" />
+          </div>
+          <div class="campo">
+            <label for="f-numero">Número</label>
+            <input id="f-numero" type="text" maxlength="12" placeholder="025/198" />
+          </div>
+        </div>
+        <div class="fila">
+          <div class="campo">
+            <label for="f-cantidad">Cuántas tengo</label>
+            <input id="f-cantidad" type="number" inputmode="numeric" min="1" max="99" value="1" />
+          </div>
+          <div class="campo">
+            <label for="f-precio">Valor aprox. (€)</label>
+            <input id="f-precio" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,50" />
+          </div>
+        </div>
+        <div class="campo">
+          <label for="f-notas">Notas</label>
+          <input id="f-notas" type="text" maxlength="120" placeholder="Me la regaló…" />
+        </div>
+      </div>
+
+      <div class="acciones">
+        <div class="barra" id="barra"><div></div></div>
+        <p id="estado"></p>
+        <button class="btn btn-rojo btn-bloque" id="btn-guardar" onclick="guardar()">💾 Guardar en el álbum</button>
+      </div>
+    </section>
+  </main>
+
+  <input type="file" id="in-camara" accept="image/*" capture="environment" />
+  <input type="file" id="in-galeria" accept="image/*" multiple />
+  <div id="toast"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="comun.js"></script>
+  <script>
+    const $ = id => document.getElementById(id);
+    let cola = [];          // ficheros pendientes
+    let actual = null;      // fichero en edición
+    let rot = 0;
+    let tipoSel = '';
+    let estrellas = 3;
+
+    /* ── Construir controles ── */
+    $('chips-tipo').innerHTML = TIPOS.map(t =>
+      `<button type="button" class="chip" style="--tc:${t.color}" data-tipo="${t.id}">${t.ico} ${t.id}</button>`).join('');
+    $('chips-tipo').addEventListener('click', e => {
+      const b = e.target.closest('.chip'); if (!b) return;
+      ponerTipo(tipoSel === b.dataset.tipo ? '' : b.dataset.tipo);
+    });
+    function ponerTipo(t) {
+      tipoSel = t;
+      document.querySelectorAll('#chips-tipo .chip').forEach(c => c.classList.toggle('on', c.dataset.tipo === t));
+    }
+
+    $('f-etapa').innerHTML = ETAPAS.map((e, i) => `<option value="${e}" ${i === 1 ? 'selected' : ''}>${e}</option>`).join('');
+    $('f-rareza').innerHTML = RAREZAS.map((r, i) => `<option value="${r}">${RAREZA_ICO[i]} ${r}</option>`).join('');
+
+    $('sel-estrellas').innerHTML = [1,2,3,4,5].map(n => `<button type="button" data-n="${n}">★</button>`).join('');
+    $('sel-estrellas').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (b) ponerEstrellas(+b.dataset.n);
+    });
+    function ponerEstrellas(n) {
+      estrellas = n;
+      document.querySelectorAll('#sel-estrellas button').forEach(b => b.classList.toggle('on', +b.dataset.n <= n));
+    }
+    ponerEstrellas(3);
+
+    /* ── Contador total ── */
+    conPin(() => db.ref(REF_META).on('value', s => {
+      const n = s.numChildren();
+      $('contador').textContent = n ? `Ya hay ${n} carta${n === 1 ? '' : 's'} en el álbum` : 'El álbum está vacío. ¡Empieza con tu primera carta!';
+    }));
+
+    /* ── Selección de fotos ── */
+    function recibir(files) {
+      cola.push(...Array.from(files).filter(f => f.type.startsWith('image/')));
+      if (!actual) siguiente();
+    }
+    $('in-camara').addEventListener('change', e => { recibir(e.target.files); e.target.value = ''; });
+    $('in-galeria').addEventListener('change', e => { recibir(e.target.files); e.target.value = ''; });
+
+    function siguiente() {
+      actual = cola.shift() || null;
+      if (!actual) {
+        $('paso-datos').classList.remove('ver');
+        $('paso-foto').style.display = '';
+        return;
+      }
+      rot = 0;
+      $('previa-img').style.transform = '';
+      $('previa-img').src = URL.createObjectURL(actual);
+      $('cola').hidden = cola.length === 0;
+      $('cola').textContent = `+${cola.length} en cola`;
+      limpiarFormulario();
+      $('paso-foto').style.display = 'none';
+      $('paso-datos').classList.add('ver');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelar() {
+      if (cola.length && !confirm('¿Saltar esta foto y pasar a la siguiente?')) return;
+      siguiente();
+    }
+
+    function girar() {
+      rot = (rot + 90) % 360;
+      $('previa-img').style.transform = `rotate(${rot}deg)`;
+    }
+
+    function limpiarFormulario() {
+      ['f-nombre', 'f-ps', 'f-set', 'f-numero', 'f-notas', 'f-precio', 'in-buscar'].forEach(id => $(id).value = '');
+      $('f-cantidad').value = 1;
+      $('f-etapa').selectedIndex = 1;
+      $('f-rareza').selectedIndex = 0;
+      ponerTipo(''); ponerEstrellas(3);
+      $('resultados').innerHTML = '';
+      $('buscar-estado').textContent = 'Escribe el nombre y toca la carta que coincida: se rellenan los datos solos.';
+      $('estado').textContent = ''; $('estado').className = '';
+      $('barra').style.display = 'none';
+      $('btn-guardar').disabled = false;
+    }
+
+    /* ── Búsqueda en el catálogo (TCGdex, en español, con precios de Cardmarket) ── */
+    const API = 'https://api.tcgdex.net/v2/es';
+    const MAP_TIPO = { 'Incolora': 'Incoloro', 'Metálica': 'Metálico', 'Oscura': 'Oscuro' };
+    function mapRareza(r = '') {
+      r = r.toLowerCase();
+      if (/secreta|h[ií]per|corona|tres estrellas|dorad|rgb|futuristic/.test(r)) return 'Secreta / Dorada';
+      if (/ilustraci[oó]n especial|dos estrellas/.test(r)) return 'Ilustración especial';
+      if (/ilustraci[oó]n|una estrella|arte completo|pikachu rare/.test(r)) return 'Ilustración rara';
+      if (/ultra|vmax|vstar|incre[ií]ble|radiante|t[aá]ctico|shiny|variocolor|cuatro diamantes|mega/.test(r)) return 'Ultra rara';
+      if (/doble|holo rara v|tres diamantes/.test(r)) return 'Doble rara (ex / V)';
+      if (/holo/.test(r)) return 'Rara holo';
+      if (/uncommon|poco|dos diamantes/.test(r)) return 'Poco común';
+      if (/rara|rare|promo/.test(r)) return 'Rara';
+      return 'Común';
+    }
+    function mapEtapa(c) {
+      if (c.category !== 'Pokémon') return 'Entrenador / Energía';
+      const st = (c.stage || '').toUpperCase(), suf = c.suffix || '';
+      if (/VMAX|ASTRO|VSTAR|MEGA|UNI[OÓ]N/.test(st) || /VMAX|VSTAR|MEGA/i.test(suf)) return 'VMAX / VSTAR / Mega';
+      if (/^(V|EX|GX|ex|TAG TEAM)/i.test(suf) || / (V|EX|GX|ex)$/.test(c.name || '')) return 'V / EX / GX / ex';
+      if (st === 'FASE 2') return 'Fase 2';
+      if (st === 'FASE 1') return 'Fase 1';
+      return 'Básico';
+    }
+    function precioDe(c) {
+      const cm = c.pricing?.cardmarket; if (!cm) return 0;
+      const v = cm.trend || cm.avg || cm['trend-holo'] || cm['avg-holo'] || cm.low || 0;
+      return Math.round(v * 100) / 100;
+    }
+
+    let resultados = [];
+    async function buscarCatalogo() {
+      const q = $('in-buscar').value.trim();
+      if (!q) return;
+      $('buscar-estado').textContent = 'Buscando…';
+      $('resultados').innerHTML = '';
+      try {
+        const r = await fetch(`${API}/cards?name=${encodeURIComponent(q)}`);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        resultados = ((await r.json()) || []).filter(c => c.image).reverse().slice(0, 48);
+        if (!resultados.length) { $('buscar-estado').textContent = 'No he encontrado nada. Revisa el nombre o rellena los datos a mano.'; return; }
+        $('buscar-estado').textContent = `${resultados.length} resultados. Toca el que sea igual que tu carta (fíjate en el número de abajo):`;
+        $('resultados').innerHTML = resultados.map((c, i) => `
+          <button type="button" class="res" data-i="${i}">
+            <img src="${esc(c.image)}/low.webp" loading="lazy" alt="${esc(c.name)}" />
+            <small>${esc(c.name)} · ${esc(c.localId)}</small>
+          </button>`).join('');
+      } catch (e) {
+        $('buscar-estado').textContent = 'No se pudo conectar con el catálogo. Rellena los datos a mano.';
+      }
+    }
+    $('in-buscar').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); buscarCatalogo(); } });
+    $('resultados').addEventListener('click', async e => {
+      const b = e.target.closest('.res'); if (!b) return;
+      document.querySelectorAll('.res').forEach(x => { x.classList.toggle('sel', x === b); x.hidden = x !== b; });
+      $('buscar-estado').textContent = 'Cargando datos de la carta…';
+      let c;
+      try {
+        const r = await fetch(`${API}/cards/${encodeURIComponent(resultados[+b.dataset.i].id)}`);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        c = await r.json();
+      } catch (err) { $('buscar-estado').textContent = 'No se pudieron cargar los datos. Prueba otra vez.'; return; }
+      $('f-nombre').value = c.name || '';
+      $('f-ps').value = c.hp || '';
+      $('f-set').value = c.set?.name || '';
+      $('f-numero').value = c.localId ? `${c.localId}/${c.set?.cardCount?.official || '?'}` : '';
+      $('f-etapa').value = mapEtapa(c);
+      $('f-rareza').value = mapRareza(c.rarity);
+      $('f-precio').value = precioDe(c) || '';
+      if (c.category === 'Entrenador') ponerTipo('Entrenador');
+      else if (c.category === 'Energía') ponerTipo('Energía');
+      else { const t = (c.types || [])[0]; ponerTipo(MAP_TIPO[t] || (TIPO[t] ? t : '')); }
+      const ri = RAREZAS.indexOf($('f-rareza').value);
+      ponerEstrellas(Math.min(5, Math.max(estrellas, 1 + Math.floor(ri / 2))));
+      $('buscar-estado').innerHTML = `✅ ${esc(c.name)} (${esc(c.set?.name || '')}) — revisa abajo que todo esté bien. <a href="#" id="ver-otros">Ver otras</a>`;
+      $('ver-otros').onclick = ev => { ev.preventDefault(); document.querySelectorAll('.res').forEach(x => x.hidden = false); };
+      toast('✅ Datos rellenados');
+    });
+
+    $('f-nombre').addEventListener('change', () => {
+      if (!$('in-buscar').value) $('in-buscar').value = $('f-nombre').value;
+    });
+
+    /* ── Guardar ── */
+    async function guardar() {
+      if (!actual) return;
+      const nombre = $('f-nombre').value.trim();
+      if (!nombre) { $('f-nombre').focus(); toast('✏️ Ponle un nombre a la carta'); return; }
+      $('btn-guardar').disabled = true;
+      $('barra').style.display = 'block';
+      const barra = $('barra').firstElementChild;
+      const estado = $('estado');
+      estado.className = ''; estado.textContent = 'Preparando la foto…'; barra.style.width = '20%';
+      try {
+        const [img, thumb] = await Promise.all([
+          imagenABase64(actual, 1100, 0.82, rot),
+          imagenABase64(actual, 320, 0.72, rot),
+        ]);
+        barra.style.width = '55%'; estado.textContent = 'Subiendo…';
+        const id = db.ref(REF_META).push().key;
+        await db.ref().update({
+          [`${REF_IMG}/${id}`]: img,
+          [`${REF_META}/${id}`]: {
+            nombre,
+            tipo: tipoSel || 'Incoloro',
+            ps: Number($('f-ps').value) || 0,
+            etapa: $('f-etapa').value,
+            rareza: $('f-rareza').value,
+            estrellas,
+            set: $('f-set').value.trim(),
+            numero: $('f-numero').value.trim(),
+            cantidad: Math.max(1, Number($('f-cantidad').value) || 1),
+            notas: $('f-notas').value.trim(),
+            precio: Number($('f-precio').value) || 0,
+            thumb,
+            ts: firebase.database.ServerValue.TIMESTAMP,
+          }
+        });
+        barra.style.width = '100%';
+        estado.className = 'ok'; estado.textContent = `¡${nombre} guardada! 🎉`;
+        toast(`🎉 ${nombre} añadida al álbum`);
+        setTimeout(siguiente, 700);
+      } catch (e) {
+        estado.className = 'err'; estado.textContent = 'Error al guardar: ' + e.message;
+        $('btn-guardar').disabled = false;
+      }
+    }
+
+    let toastT;
+    function toast(msg) {
+      const t = $('toast'); t.textContent = msg; t.classList.add('ver');
+      clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('ver'), 2200);
+    }
+  </script>
+</body>
+</html>
