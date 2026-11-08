@@ -28,9 +28,13 @@ Después se rellenan con `herramientas/cartas.py` (identificando cada carta por 
 y buscándola en TCGdex):
 
 ```bash
-ALBUM_PIN=xxxxxx python3 herramientas/cartas.py pendientes /tmp/pendientes   # descarga las fotos
-python3 herramientas/cartas.py buscar "Charizard" 20 189                      # busca nombre + nº/total
-ALBUM_PIN=xxxxxx python3 herramientas/cartas.py aplicar <id_carta> swsh3-20   # rellena la ficha
+pip install opencv-python-headless numpy                                         # para el recorte
+ALBUM_PIN=xxxxxx python3 herramientas/cartas.py procesar /tmp/proc               # descarga y recorta
+python3 herramientas/cartas.py recortar <id> x1,y1,...,x4,y4 /tmp/proc            # corregir recorte a mano
+ALBUM_PIN=xxxxxx python3 herramientas/cartas.py subir_recorte <id> /tmp/proc      # sube la foto recortada
+python3 herramientas/cartas.py buscar "Charizard" 20 189                         # busca nombre + nº/total
+ALBUM_PIN=xxxxxx python3 herramientas/cartas.py aplicar <id> swsh3-20            # rellena la ficha y la marca procesada
 ```
 
 El PIN solo se pasa por variable de entorno; nunca se guarda en el repositorio.
+La foto original sin recortar queda guardada en `albumes/{clave}/orig/{id}`.
