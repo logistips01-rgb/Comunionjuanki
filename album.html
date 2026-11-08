@@ -231,7 +231,7 @@
     $('orden').value = vista.orden;
     $('buscar').value = vista.q;
 
-    $('filtro-tipo').innerHTML = `<button class="chip" data-tipo="">Todos</button>` +
+    $('filtro-tipo').innerHTML = `<button class="chip" data-tipo="">Todos</button><button class="chip" style="--tc:#f5a400" data-tipo="__pend">⏳ Pendientes</button>` +
       TIPOS.map(t => `<button class="chip" style="--tc:${t.color}" data-tipo="${t.id}">${t.ico} ${t.id}</button>`).join('');
     $('filtro-tipo').addEventListener('click', e => {
       const b = e.target.closest('.chip'); if (!b) return;
@@ -261,6 +261,8 @@
       pintar();
       if (location.hash === '#pase' && !$('pase').classList.contains('ver')) abrirPase(true);
     }));
+
+    const nombreDe = c => c.nombre || 'Pendiente de identificar';
 
     /* ── Ordenar ── */
     const num = s => { const m = String(s || '').match(/\d+/); return m ? +m[0] : 99999; };
@@ -308,7 +310,8 @@
       const q = vista.q.trim().toLowerCase();
       lista = Object.keys(cartas).filter(id => {
         const c = cartas[id];
-        if (vista.tipo && c.tipo !== vista.tipo) return false;
+        if (vista.tipo === '__pend') { if (!c.pendiente) return false; }
+        else if (vista.tipo && c.tipo !== vista.tipo) return false;
         if (q && !`${c.nombre} ${c.set} ${c.numero} ${c.notas} ${c.rareza} ${c.tipo}`.toLowerCase().includes(q)) return false;
         return true;
       }).sort(comparar);
@@ -342,7 +345,7 @@
             ${['puntuacion', 'ps', 'rareza', 'estrellas', 'precio'].includes(vista.orden) ? `<span class="pos">#${i + 1}</span>` : ''}
             ${(c.cantidad || 1) > 1 ? `<span class="cant">×${c.cantidad}</span>` : ''}
             <div class="cuerpo">
-              <span class="nom">${esc(c.nombre)}</span>
+              <span class="nom">${c.pendiente ? '⏳ ' : ''}${esc(nombreDe(c))}</span>
               <div class="lin">${tipoBadge(c.tipo)}${c.ps ? `<span class="ps">${c.ps} PS</span>` : ''}</div>
               <div class="lin"><span class="estrellas">${estrellasTxt(c.estrellas)}</span><span title="${esc(c.rareza)}">${RAREZA_ICO[RAREZAS.indexOf(c.rareza)] || ''}</span></div>
             </div>
@@ -367,7 +370,7 @@
       detId = id; cancelarEdicion();
       const c = cartas[id];
       $('det-img').src = c.thumb;
-      $('det-nom').textContent = c.nombre;
+      $('det-nom').textContent = (c.pendiente ? '⏳ ' : '') + nombreDe(c);
       $('det-tipo').innerHTML = tipoBadge(c.tipo);
       const fecha = c.ts ? new Date(c.ts).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
       const pos = lista.indexOf(id);
@@ -439,6 +442,7 @@
           cantidad: Math.max(1, Number($('e-cantidad').value) || 1),
           notas: $('e-notas').value.trim(),
           precio: Number($('e-precio').value) || 0,
+          pendiente: null,
         });
         toast('✅ Carta actualizada');
         abrirDet(id);
@@ -501,7 +505,7 @@
       while (cont.children.length > 2) cont.firstElementChild.remove();
       if (cont.children.length === 2) cont.firstElementChild.classList.remove('activa');
 
-      $('pase-nom').textContent = c.nombre || '';
+      $('pase-nom').textContent = nombreDe(c);
       $('pase-det').innerHTML = `${tipoBadge(c.tipo)}${c.ps ? `<span>❤️ ${c.ps} PS</span>` : ''}<span>${esc(c.etapa || '')}</span>`
         + `<span>${RAREZA_ICO[RAREZAS.indexOf(c.rareza)] || ''} ${esc(c.rareza || '')}</span><span class="estrellas">${estrellasTxt(c.estrellas)}</span>`;
       $('pase-cnt').textContent = `${pase.idx + 1} / ${n}`;
