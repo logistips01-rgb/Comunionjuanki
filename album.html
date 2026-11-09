@@ -382,7 +382,7 @@
         <dt>Colección</dt><dd>${esc(c.set || '—')}</dd>
         <dt>Número</dt><dd>${esc(c.numero || '—')}</dd>
         <dt>Tengo</dt><dd>${c.cantidad || 1}</dd>
-        ${c.precio ? `<dt>Valor</dt><dd>${euros(c.precio)}</dd>` : ''}
+        ${c.precio ? `<dt>Valor</dt><dd>≈ ${euros(c.precio)}${c.precioDudoso ? ' <small style="color:var(--gris)">(dato dudoso)</small>' : ''}<br><small style="color:var(--gris);font-weight:400">Media 30 días en Cardmarket, carta en perfecto estado</small></dd>` : ''}
         ${c.notas ? `<dt>Notas</dt><dd>${esc(c.notas)}</dd>` : ''}
         <dt>Puesto</dt><dd>${pos + 1} de ${lista.length}</dd>
         ${fecha ? `<dt>Añadida</dt><dd>${fecha}</dd>` : ''}`;

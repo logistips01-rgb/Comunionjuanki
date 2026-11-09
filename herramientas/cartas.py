@@ -23,6 +23,8 @@ Uso:
       Muestra la ficha que se rellenaría con esa carta del catálogo.
   ALBUM_PIN=123456 python3 herramientas/cartas.py aplicar <id_carta> <tcgdex_id> [estrellas]
       Rellena la ficha de la carta con los datos del catálogo y quita "pendiente".
+  ALBUM_PIN=123456 python3 herramientas/cartas.py precios
+      Recalcula el valor (media de 30 días en Cardmarket) de todas las cartas del catálogo.
   ALBUM_PIN=123456 python3 herramientas/cartas.py manual <id_carta> '<json>'
       Actualiza campos a mano (para cartas que no estén en el catálogo).
 
@@ -34,11 +36,15 @@ Estructura extra en Firebase:
 import base64, hashlib, json, os, re, sys, urllib.parse, urllib.request
 
 DB = os.environ.get("ALBUM_DB", "https://juanki-cfec7-default-rtdb.europe-west1.firebasedatabase.app")
-API = "https://api.tcgdex.net/v2/es"
+API = "https://api.tcgdex.net/v2/" + os.environ.get("TCGDEX_LANG", "es")   # TCGDEX_LANG=en para colecciones que no estén en español
 
 RAREZAS = ['Común', 'Poco común', 'Rara', 'Rara holo', 'Doble rara (ex / V)',
            'Ultra rara', 'Ilustración rara', 'Ilustración especial', 'Secreta / Dorada']
-MAP_TIPO = {'Incolora': 'Incoloro', 'Metálica': 'Metálico', 'Oscura': 'Oscuro'}
+MAP_TIPO = {'Incolora': 'Incoloro', 'Metálica': 'Metálico', 'Oscura': 'Oscuro',
+            'Grass': 'Planta', 'Fire': 'Fuego', 'Water': 'Agua', 'Lightning': 'Rayo', 'Psychic': 'Psíquico',
+            'Fighting': 'Lucha', 'Darkness': 'Oscuro', 'Metal': 'Metálico', 'Fairy': 'Hada', 'Dragon': 'Dragón',
+            'Colorless': 'Incoloro'}
+MAP_CAT = {'Trainer': 'Entrenador', 'Energy': 'Energía'}
 TIPOS = {'Planta', 'Fuego', 'Agua', 'Rayo', 'Psíquico', 'Lucha', 'Oscuro', 'Metálico',
          'Hada', 'Dragón', 'Incoloro', 'Entrenador', 'Energía'}
 
@@ -70,6 +76,15 @@ def base():
 # ── Traducción de datos de TCGdex a la ficha del álbum (igual que en subir.html) ──
 def map_rareza(r):
     r = (r or "").lower()
+    if re.search(r"rare secret|rare rainbow|hyper|gold", r): return 'Secreta / Dorada'
+    if "special illustration" in r: return 'Ilustración especial'
+    if "illustration" in r: return 'Ilustración rara'
+    if re.search(r"rare ultra|ultra rare|full art|rare holo (v|vmax|vstar|gx|ex)", r): return 'Ultra rara' if "ultra" in r or "full" in r else 'Doble rara (ex / V)'
+    if r == "uncommon": return 'Poco común'
+    if r == "common": return 'Común'
+    if r == "rare": return 'Rara'
+    if r == "rare holo": return 'Rara holo'
+
     if re.search(r"secreta|h[ií]per|corona|tres estrellas|dorad|rgb|futuristic", r): return 'Secreta / Dorada'
     if re.search(r"ilustraci[oó]n especial|dos estrellas", r): return 'Ilustración especial'
     if re.search(r"ilustraci[oó]n|una estrella|arte completo|pikachu rare", r): return 'Ilustración rara'
@@ -83,6 +98,8 @@ def map_rareza(r):
 
 def map_etapa(c):
     if c.get("category") != "Pokémon": return 'Entrenador / Energía'
+    st = {"BASIC": "BÁSICO", "STAGE1": "FASE 1", "STAGE2": "FASE 2"}.get((c.get("stage") or "").upper(), c.get("stage") or "")
+    c = {**c, "stage": st}
     st, suf, nom = (c.get("stage") or "").upper(), c.get("suffix") or "", c.get("name") or ""
     if re.search(r"VMAX|ASTRO|VSTAR|MEGA|UNI[OÓ]N", st) or re.search(r"VMAX|VSTAR|MEGA", suf, re.I): return 'VMAX / VSTAR / Mega'
     if re.match(r"(V|EX|GX|ex|TAG TEAM)", suf, re.I) or re.search(r" (V|EX|GX|ex)$", nom): return 'V / EX / GX / ex'
@@ -92,6 +109,7 @@ def map_etapa(c):
 
 
 def map_tipo(c):
+    c = {**c, "category": MAP_CAT.get(c.get("category"), c.get("category"))}
     if c.get("category") == "Entrenador": return "Entrenador"
     if c.get("category") == "Energía": return "Energía"
     t = (c.get("types") or [""])[0]
@@ -99,10 +117,27 @@ def map_tipo(c):
     return t if t in TIPOS else "Incoloro"
 
 
-def precio(c):
+def precio_info(c):
+    """Valor orientativo en Cardmarket: media de los últimos 30 días (más estable que la tendencia).
+    Ojo: en Cardmarket los campos "-holo" son la versión REVERSE holo; el precio normal ya es el de la
+    carta tal cual (también para las V, VMAX, GX… que solo existen en holo). Devuelve (precio, dudoso)."""
     cm = (c.get("pricing") or {}).get("cardmarket") or {}
-    v = cm.get("trend") or cm.get("avg") or cm.get("trend-holo") or cm.get("avg-holo") or cm.get("low") or 0
-    return round(float(v), 2)
+    var = c.get("variants") or {}
+    solo_reverse = var.get("reverse") and not var.get("normal") and not var.get("holo")
+    claves = ["avg30-holo", "avg-holo", "trend-holo"] if solo_reverse else ["avg30", "avg", "trend"]
+    v = next((cm[k] for k in claves if cm.get(k)), None)
+    dudoso = v is None
+    if v is None:
+        v = cm.get("low") or 0
+    # Si la media del mes y la tendencia difieren mucho (más del doble), el precio está bailando
+    t = cm.get("trend-holo" if solo_reverse else "trend")
+    if v and t and max(v, t) / max(min(v, t), 0.01) > 2 and max(v, t) > 1:
+        dudoso = True
+    return round(float(v or 0), 2), dudoso
+
+
+def precio(c):
+    return precio_info(c)[0]
 
 
 def ficha(c):
@@ -115,12 +150,24 @@ def ficha(c):
         "etapa": map_etapa(c),
         "rareza": rar,
         "set": (c.get("set") or {}).get("name") or "",
-        "numero": f"{c.get('localId')}/{total}" if c.get("localId") else "",
-        "precio": precio(c),
+        "numero": numero_impreso(c.get("localId"), total, c.get("id", "")),
+        "precio": precio_info(c)[0],
+        "precioDudoso": precio_info(c)[1] or None,
         "tcgdex": c.get("id"),
         "rarezaOriginal": c.get("rarity") or "",
         "ilustrador": c.get("illustrator") or "",
     }
+
+
+def numero_impreso(local, total, id_carta=""):
+    """Como viene impreso en la carta. Desde Espada y Escudo (2020) con ceros: 082/264; antes sin ellos: 19/108."""
+    if not local:
+        return ""
+    local = str(local)
+    moderna = re.match(r"(swsh|sv|me)", id_carta or "")
+    if moderna and local.isdigit() and str(total).isdigit():
+        local = local.zfill(max(3, len(str(total))))
+    return f"{local}/{total}"
 
 
 def num(s):
@@ -195,6 +242,34 @@ def cmd_manual(id_carta, js):
     datos.setdefault("procesada", {".sv": "timestamp"})
     http(f"{base()}/meta/{id_carta}.json", "PATCH", datos)
     print(f"✔ {id_carta} actualizada: {datos}")
+
+
+def cmd_precios():
+    """Recalcula el valor de todas las cartas identificadas en el catálogo."""
+    b = base()
+    meta = http(f"{b}/meta.json") or {}
+    total = 0
+    for k, v in sorted(meta.items(), key=lambda x: x[1].get("ts", 0)):
+        tid = v.get("tcgdex")
+        if not tid:
+            print(f"{k}\t{v.get('nombre','')}\tsin catálogo, se deja {v.get('precio', 0)}€")
+            total += (v.get("precio") or 0) * (v.get("cantidad") or 1)
+            continue
+        c = None
+        for lang in ("es", "en"):
+            try:
+                c = http(f"https://api.tcgdex.net/v2/{lang}/cards/{urllib.parse.quote(tid)}")
+                if c and c.get("pricing"):
+                    break
+            except Exception:
+                pass
+        if not c:
+            print(f"{k}\t{v.get('nombre','')}\tERROR al consultar"); continue
+        p, dudoso = precio_info(c)
+        http(f"{b}/meta/{k}.json", "PATCH", {"precio": p, "precioDudoso": dudoso or None})
+        total += p * (v.get("cantidad") or 1)
+        print(f"{k}\t{v.get('nombre','')}\t{v.get('precio', 0)}€ → {p}€{'  (dudoso)' if dudoso else ''}")
+    print(f"Valor total aproximado: {round(total, 2)}€")
 
 
 # ── Recorte de la carta ──
@@ -366,7 +441,7 @@ def cmd_hecha(id_carta):
 if __name__ == "__main__":
     cmds = {"pendientes": cmd_pendientes, "todas": cmd_todas, "buscar": cmd_buscar,
             "ver": cmd_ver, "aplicar": cmd_aplicar, "manual": cmd_manual,
-            "procesar": cmd_procesar, "recortar": cmd_recortar,
+            "procesar": cmd_procesar, "precios": cmd_precios, "recortar": cmd_recortar,
             "subir_recorte": cmd_subir_recorte, "hecha": cmd_hecha}
     if len(sys.argv) < 2 or sys.argv[1] not in cmds:
         print(__doc__); sys.exit(1)
