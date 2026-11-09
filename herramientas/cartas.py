@@ -25,6 +25,8 @@ Uso:
       Rellena la ficha de la carta con los datos del catálogo y quita "pendiente".
   ALBUM_PIN=123456 python3 herramientas/cartas.py precios
       Recalcula el valor (media de 30 días en Cardmarket) de todas las cartas del catálogo.
+  ALBUM_PIN=123456 python3 herramientas/cartas.py cotizadas [umbral]
+      Cartas que valen más del umbral (10 € por defecto, o UMBRAL_AVISO): candidatas a vender.
   ALBUM_PIN=123456 python3 herramientas/cartas.py manual <id_carta> '<json>'
       Actualiza campos a mano (para cartas que no estén en el catálogo).
 
@@ -234,6 +236,8 @@ def cmd_aplicar(id_carta, tid, estrellas=None):
     f["procesada"] = {".sv": "timestamp"}
     http(f"{b}/meta/{id_carta}.json", "PATCH", f)
     print(f"✔ {id_carta} → {f['nombre']} · {f['set']} {f['numero']} · {f['rareza']} · {f['precio']}€")
+    if f["precio"] >= UMBRAL_AVISO:
+        print(f"  💰 AVISO: {f['nombre']} vale unos {f['precio']}€ — interesante para vender")
 
 
 def cmd_manual(id_carta, js):
@@ -268,8 +272,24 @@ def cmd_precios():
         p, dudoso = precio_info(c)
         http(f"{b}/meta/{k}.json", "PATCH", {"precio": p, "precioDudoso": dudoso or None})
         total += p * (v.get("cantidad") or 1)
-        print(f"{k}\t{v.get('nombre','')}\t{v.get('precio', 0)}€ → {p}€{'  (dudoso)' if dudoso else ''}")
+        aviso = "  💰 AVISO: ahora supera el umbral" if p >= UMBRAL_AVISO > (v.get("precio") or 0) else ""
+        print(f"{k}\t{v.get('nombre','')}\t{v.get('precio', 0)}€ → {p}€{'  (dudoso)' if dudoso else ''}{aviso}")
     print(f"Valor total aproximado: {round(total, 2)}€")
+
+
+UMBRAL_AVISO = float(os.environ.get("UMBRAL_AVISO", "10"))   # € a partir de los que conviene avisar
+
+
+def cmd_cotizadas(umbral=None):
+    """Lista las cartas cuyo valor supera el umbral (por defecto 10 €): candidatas a vender."""
+    umbral = float(umbral) if umbral else UMBRAL_AVISO
+    meta = http(f"{base()}/meta.json") or {}
+    top = sorted(((v.get("precio") or 0, v) for v in meta.values() if (v.get("precio") or 0) >= umbral),
+                 key=lambda x: -x[0])
+    print(f"{len(top)} cartas de {umbral:g} € o más")
+    for p, v in top:
+        print(f"{p:8.2f} €\t{v.get('nombre','')}\t{v.get('set','')} {v.get('numero','')}\tx{v.get('cantidad',1)}"
+              f"{'  (dato dudoso)' if v.get('precioDudoso') else ''}")
 
 
 # ── Recorte de la carta ──
@@ -441,7 +461,7 @@ def cmd_hecha(id_carta):
 if __name__ == "__main__":
     cmds = {"pendientes": cmd_pendientes, "todas": cmd_todas, "buscar": cmd_buscar,
             "ver": cmd_ver, "aplicar": cmd_aplicar, "manual": cmd_manual,
-            "procesar": cmd_procesar, "precios": cmd_precios, "recortar": cmd_recortar,
+            "procesar": cmd_procesar, "precios": cmd_precios, "cotizadas": cmd_cotizadas, "recortar": cmd_recortar,
             "subir_recorte": cmd_subir_recorte, "hecha": cmd_hecha}
     if len(sys.argv) < 2 or sys.argv[1] not in cmds:
         print(__doc__); sys.exit(1)
