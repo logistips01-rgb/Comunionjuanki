@@ -34,11 +34,15 @@ Estructura extra en Firebase:
 import base64, hashlib, json, os, re, sys, urllib.parse, urllib.request
 
 DB = os.environ.get("ALBUM_DB", "https://juanki-cfec7-default-rtdb.europe-west1.firebasedatabase.app")
-API = "https://api.tcgdex.net/v2/es"
+API = "https://api.tcgdex.net/v2/" + os.environ.get("TCGDEX_LANG", "es")   # TCGDEX_LANG=en para colecciones que no estén en español
 
 RAREZAS = ['Común', 'Poco común', 'Rara', 'Rara holo', 'Doble rara (ex / V)',
            'Ultra rara', 'Ilustración rara', 'Ilustración especial', 'Secreta / Dorada']
-MAP_TIPO = {'Incolora': 'Incoloro', 'Metálica': 'Metálico', 'Oscura': 'Oscuro'}
+MAP_TIPO = {'Incolora': 'Incoloro', 'Metálica': 'Metálico', 'Oscura': 'Oscuro',
+            'Grass': 'Planta', 'Fire': 'Fuego', 'Water': 'Agua', 'Lightning': 'Rayo', 'Psychic': 'Psíquico',
+            'Fighting': 'Lucha', 'Darkness': 'Oscuro', 'Metal': 'Metálico', 'Fairy': 'Hada', 'Dragon': 'Dragón',
+            'Colorless': 'Incoloro'}
+MAP_CAT = {'Trainer': 'Entrenador', 'Energy': 'Energía'}
 TIPOS = {'Planta', 'Fuego', 'Agua', 'Rayo', 'Psíquico', 'Lucha', 'Oscuro', 'Metálico',
          'Hada', 'Dragón', 'Incoloro', 'Entrenador', 'Energía'}
 
@@ -70,6 +74,15 @@ def base():
 # ── Traducción de datos de TCGdex a la ficha del álbum (igual que en subir.html) ──
 def map_rareza(r):
     r = (r or "").lower()
+    if re.search(r"rare secret|rare rainbow|hyper|gold", r): return 'Secreta / Dorada'
+    if "special illustration" in r: return 'Ilustración especial'
+    if "illustration" in r: return 'Ilustración rara'
+    if re.search(r"rare ultra|ultra rare|full art|rare holo (v|vmax|vstar|gx|ex)", r): return 'Ultra rara' if "ultra" in r or "full" in r else 'Doble rara (ex / V)'
+    if r == "uncommon": return 'Poco común'
+    if r == "common": return 'Común'
+    if r == "rare": return 'Rara'
+    if r == "rare holo": return 'Rara holo'
+
     if re.search(r"secreta|h[ií]per|corona|tres estrellas|dorad|rgb|futuristic", r): return 'Secreta / Dorada'
     if re.search(r"ilustraci[oó]n especial|dos estrellas", r): return 'Ilustración especial'
     if re.search(r"ilustraci[oó]n|una estrella|arte completo|pikachu rare", r): return 'Ilustración rara'
@@ -83,6 +96,8 @@ def map_rareza(r):
 
 def map_etapa(c):
     if c.get("category") != "Pokémon": return 'Entrenador / Energía'
+    st = {"BASIC": "BÁSICO", "STAGE1": "FASE 1", "STAGE2": "FASE 2"}.get((c.get("stage") or "").upper(), c.get("stage") or "")
+    c = {**c, "stage": st}
     st, suf, nom = (c.get("stage") or "").upper(), c.get("suffix") or "", c.get("name") or ""
     if re.search(r"VMAX|ASTRO|VSTAR|MEGA|UNI[OÓ]N", st) or re.search(r"VMAX|VSTAR|MEGA", suf, re.I): return 'VMAX / VSTAR / Mega'
     if re.match(r"(V|EX|GX|ex|TAG TEAM)", suf, re.I) or re.search(r" (V|EX|GX|ex)$", nom): return 'V / EX / GX / ex'
@@ -92,6 +107,7 @@ def map_etapa(c):
 
 
 def map_tipo(c):
+    c = {**c, "category": MAP_CAT.get(c.get("category"), c.get("category"))}
     if c.get("category") == "Entrenador": return "Entrenador"
     if c.get("category") == "Energía": return "Energía"
     t = (c.get("types") or [""])[0]
@@ -115,7 +131,7 @@ def ficha(c):
         "etapa": map_etapa(c),
         "rareza": rar,
         "set": (c.get("set") or {}).get("name") or "",
-        "numero": numero_impreso(c.get("localId"), total),
+        "numero": numero_impreso(c.get("localId"), total, c.get("id", "")),
         "precio": precio(c),
         "tcgdex": c.get("id"),
         "rarezaOriginal": c.get("rarity") or "",
@@ -123,12 +139,13 @@ def ficha(c):
     }
 
 
-def numero_impreso(local, total):
-    """Como viene impreso en la carta: 082/264 (rellena con ceros hasta los dígitos del total)."""
+def numero_impreso(local, total, id_carta=""):
+    """Como viene impreso en la carta. Desde Espada y Escudo (2020) con ceros: 082/264; antes sin ellos: 19/108."""
     if not local:
         return ""
     local = str(local)
-    if local.isdigit() and str(total).isdigit():
+    moderna = re.match(r"(swsh|sv|me)", id_carta or "")
+    if moderna and local.isdigit() and str(total).isdigit():
         local = local.zfill(max(3, len(str(total))))
     return f"{local}/{total}"
 
